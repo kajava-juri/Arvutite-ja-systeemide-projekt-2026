@@ -17,11 +17,11 @@ write here the bitrate, slave address and other info regarding the communication
 
 #### Register map
 
-For now refer to the datasheet [994020910_911913 N1910en1_QBM68xx.pdf](docs/994020910_911913_N1910en1_QBM68xx.pdf)
+For now refer to the datasheet [994020910_911913 N1910en1_QBM68xx.pdf](datasheets/994020910_911913_N1910en1_QBM68xx.pdf)
 
 ### Reading over analog
 
-info on how to read over analog, for now refer to the datasheet [994020910_911913 N1910en1_QBM68xx.pdf](docs/994020910_911913_N1910en1_QBM68xx.pdf)
+info on how to read over analog, for now refer to the datasheet [994020910_911913 N1910en1_QBM68xx.pdf](datasheets/994020910_911913_N1910en1_QBM68xx.pdf)
 
 
 ---
