@@ -13,7 +13,11 @@ Modbus RS-485 uses differential signaling over twisted pair. For the differentia
 
 #### Bus settings
 
-write here the bitrate, slave address and other info regarding the communication bus
+**baud:**
+- default - 9600, 1 stop bit, no parity
+- range - 1200 - 56000
+
+
 
 #### Register map
 
