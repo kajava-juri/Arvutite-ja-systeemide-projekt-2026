@@ -12,7 +12,6 @@ A closed-loop control system for regulating air pressure to a configurable setpo
 #### Block diagram
 
 ![Block Diagram](docs/static/images/block_diagram.drawio.png)
-
 ## Project structure
 
 - docs - contains documentation markdown files

@@ -20,11 +20,32 @@ Description of protocols, components choice, and modules used. For the overview 
 - **3-pin** - power, ground, tach (RPM feedback).
 - **4-pin** - adds PWM control pin.
 
-| Fan | Voltage | Pins  | Control | Static pressure | Vendor | Cheapest Price | Link | Link 2 |
-| --- | ------- | ----- | ------- | --------------- | ------ | -------------- | ---- | ------ |
-|     | 12 V    | 4-pin | PWM     |                 |        |                |      |        |
-|     | 24 V    | 4-pin | PWM     |                 |        |                |      |        |
-|     | 12 V    | 3-pin | voltage |                 |        |                |      |        |
-|     | 24 V    | 3-pin | voltage |                 |        |                |      |        |
-|     | 12 V    | 2-pin | voltage |                 |        |                |      |        |
-|     | 24 V    | 2-pn  | voltage |                 |        |                |      |        |
+| Fan | Voltage | Pins  | Control | Static pressure |
+| --- | ------- | ----- | ------- | --------------- |
+|     | 12 V    | 4-pin | PWM     |                 |
+|     | 24 V    | 4-pin | PWM     |                 |
+|     | 12 V    | 3-pin | voltage |                 |
+|     | 24 V    | 3-pin | voltage |                 |
+|     | 12 V    | 2-pin | voltage |                 |
+|     | 24 V    | 2-pn  | voltage |                 |
+
+## Microcontroller
+
+### Requirements
+
+#### Memory
+xxx
+
+#### Peripherals
+
+- 1 UART bus
+- 1 PWM GPIO pin (> 20 kHz)
+- 2 digital for MAX485 RE/DE or with inverter only 1 needed
+- 2-4 user interface pins
+	- SPI
+	- I2C
+	- GPIO
+
+
+
+
