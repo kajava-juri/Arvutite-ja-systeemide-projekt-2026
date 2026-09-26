@@ -24,4 +24,4 @@ A closed-loop control system for regulating air pressure to a configurable setpo
 -  [components](docs/components.md) - bill of materials, links, vendors and prices
 - [qbm68-sensor](docs/qbm68-sensor.md) - documentation on the siemens sensor, usage in the project, troubleshooting, etc...
 - [fan-control](docs/fan-control.md) - fan control solutions, schematics
-- [power](docs/power) - regulator and voltage rails
+- [power](docs/power.md) - regulator and voltage rails
