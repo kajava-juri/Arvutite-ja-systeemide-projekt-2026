@@ -6,7 +6,7 @@ Documentation on the power solutions used, reference the block diagram.
 IC regulator with minimal configuration:
 ### [MC7824CT](https://www.mouser.com/catalog/specsheets/mc7800-d.pdf)
 
-![Power dissipation to ambient temperature](docs/static/images/mc7824ct_power_dissipation.png)
+![Power dissipation to ambient temperature](static/images/mc7824ct_power_dissipation.png)
 
 With no heatsink at 50 degrees 1.8 W dissipation is the worst case. Using $\theta_{JA}$ = $65 \degree C/W$ and $\theta_{JC} = 5 \degree C/W$, summing them up gives $70 \degree C/W$ and headroom of $80 \degree C/W$. Considering the 12 V mock-up fan speed at maximum takes (depending on the fan):
 - fan motor - 200 mA - 500 mA
