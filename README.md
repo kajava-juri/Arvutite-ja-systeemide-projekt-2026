@@ -18,6 +18,11 @@ A closed-loop control system for regulating air pressure to a configurable setpo
 - src - firmware code folder
 - schematics - diagrams and KiCad projects
 
+## Wiring
+
+### MAX485 module wiring for the prototype
+
+![MAX485 module wiring](docs/static/images/rs485_module_wiring.png)
 
 ## Documentation
 
