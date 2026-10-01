@@ -3,6 +3,7 @@
 #include "common.h"
 #include "max485.h"
 #include <stdio.h>
+#include "modbus_rtu.h"
 
 int main()
 {
@@ -22,16 +23,12 @@ int main()
     max485_init(UART_ID_MAX485);
     max485_set_transmit_mode(TRANSMIT);
     // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
+    ModbusRtuContext ctx = {0};
+    modbus_init(&ctx);
 
     while (true) {
-        max485_set_transmit_mode(TRANSMIT);
-        sleep_ms(500);
-        const char *message = "Hello, MAX485!\n";
-        max485_send_data((uint8_t *)message, strlen(message));
-        sleep_ms(500);
-        max485_set_transmit_mode(RECEIVE);
-        sleep_ms(100);
-
+        modbus_state_machine(&ctx);
+        sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS);
     }
 }
 

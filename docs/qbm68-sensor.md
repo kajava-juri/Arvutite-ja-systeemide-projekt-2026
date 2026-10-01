@@ -17,6 +17,7 @@ Modbus RS-485 uses differential signaling over twisted pair. For the differentia
 - default - 9600, 1 stop bit, no parity
 - range - 1200 - 56000
 
+Bit sequence: \[ START | 1 | 2 | 3 | 4 | 5 | 6 | 7 |  8 | STOP | STOP \]
 
 
 #### Register map
