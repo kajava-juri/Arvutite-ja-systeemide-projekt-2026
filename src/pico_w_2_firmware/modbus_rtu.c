@@ -225,7 +225,7 @@ void modbus_read_request(ModbusRtuContext *ctx)
     uart_read_blocking(UART_ID_MAX485, (uint8_t *)ctx->reply.data, ctx->reply.data_length);
     ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
     uart_puts(UART_ID, "Data received: ");
-    char formatted_data[253]; // 252 bytes + null terminator
+    char formatted_data[504]; // 2 characters per byte + null terminator
     // dumb data hex formatting
     for (int i = 0; i < ctx->reply.data_length; i++) {
         snprintf(&formatted_data[i * 2], 3, "%02X", (unsigned char)ctx->reply.data[i]);
