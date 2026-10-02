@@ -22,12 +22,14 @@ typedef enum
 // contains 2 4 bit hex characters
 
 // modbus rtu frame
+// IMPORTANT! do not reorder the slave_address, function_code and data fields
+// this order is used to calculate the CRC
 typedef struct
 {
     uint8_t slave_address;
     uint8_t function_code;
-    uint8_t crc[2];
     char data[252];
+    uint8_t crc[2];
     int data_length;
 } ModbusRtuFrame;
 
@@ -81,5 +83,8 @@ void modbus_send_request(ModbusRtuContext *context);
 void modbus_read_request(ModbusRtuContext *context);
 
 void modbus_state_machine(ModbusRtuContext *context);
+
+uint16_t compute_crc_fast(uint8_t *message, size_t message_length);
+uint16_t compute_crc_simple(uint8_t *message, size_t message_length);
 
 #endif // MODBUS_RTU_H

@@ -28,7 +28,7 @@ int main()
 
     while (true) {
         modbus_state_machine(&ctx);
-        sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS);
+        sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS * 2);
     }
 }
 
