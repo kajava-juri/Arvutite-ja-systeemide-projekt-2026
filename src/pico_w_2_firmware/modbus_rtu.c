@@ -2,6 +2,8 @@
 #include "max485.h"
 #include <string.h>
 
+int one_request_sent = 0;
+
 /* Table of CRC values for high–order byte */
 static unsigned char auchCRCHi[] = {
     0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81,
@@ -91,14 +93,19 @@ void modbus_init(ModbusRtuContext *ctx)
 
 void modbus_action_idle(ModbusRtuContext *ctx)
 {
+    if(one_request_sent) {
+        return;
+    }
     uart_puts(UART_ID, "Modbus RTU Idle state\n");
-    char *data = "Hello, Modbus!";
-    modbus_set_slave_address(ctx, (uint8_t)42);
-    modbus_build_request(ctx, 0x03, data, strlen(data));
-    modbus_send_request(ctx);
+    // char *data = "Hello, Modbus!";
+    // modbus_set_slave_address(ctx, (uint8_t)42);
+    // modbus_build_request(ctx, 0x03, data, strlen(data));
+    // modbus_send_request(ctx);
+    modbus_read_from_register(ctx, 0x0000, 1);
 
     ctx->state = MODBUS_RTU_WAITING_FOR_REPLY;
     uart_puts(UART_ID, "Waiting for reply from slave\n");
+    one_request_sent = 1;
 }
 
 void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
@@ -115,18 +122,18 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
 void modbus_action_processing_reply(ModbusRtuContext *ctx)
 {
 
-    uart_puts(UART_ID, "Processing reply from slave\n");
-    uart_puts(UART_ID, "Slave address: ");
-    uart_putc(UART_ID, ctx->reply.slave_address);
-    uart_puts(UART_ID, "\nFunction code: ");
-    uart_putc(UART_ID, ctx->reply.function_code);
-    uart_puts(UART_ID, "\nData: ");
-    uart_puts(UART_ID, ctx->reply.data);
-    uart_puts(UART_ID, "\nData length: ");
-    char data_length_str[4];
-    snprintf(data_length_str, sizeof(data_length_str), "%d", ctx->reply.data_length);
-    uart_puts(UART_ID, data_length_str);
-    uart_puts(UART_ID, "\n");
+    // uart_puts(UART_ID, "Processing reply from slave\n");
+    // uart_puts(UART_ID, "Slave address: ");
+    // uart_putc(UART_ID, ctx->reply.slave_address);
+    // uart_puts(UART_ID, "\nFunction code: ");
+    // uart_putc(UART_ID, ctx->reply.function_code);
+    // uart_puts(UART_ID, "\nData: ");
+    // uart_puts(UART_ID, ctx->reply.data);
+    // uart_puts(UART_ID, "\nData length: ");
+    // char data_length_str[4];
+    // snprintf(data_length_str, sizeof(data_length_str), "%d", ctx->reply.data_length);
+    // uart_puts(UART_ID, data_length_str);
+    // uart_puts(UART_ID, "\n");
 
     ctx->state = MODBUS_RTU_IDLE;
 }
@@ -184,18 +191,44 @@ void modbus_send_request(ModbusRtuContext *ctx)
     max485_send_data(ctx->request.crc, 2);
 
     uart_tx_wait_blocking(UART_ID_MAX485);
+
+    max485_set_transmit_mode(RECEIVE);
 }
 
 void modbus_read_request(ModbusRtuContext *ctx)
 {
+    uart_puts(UART_ID, "Reading reply from slave\n");
+
     uart_read_blocking(UART_ID_MAX485, &ctx->reply.slave_address, 1);
     ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
+    uart_puts(UART_ID, "Slave address received: ");
+    uart_putc(UART_ID, ctx->reply.slave_address);
+    uart_puts(UART_ID, "\n");
 
     uart_read_blocking(UART_ID_MAX485, &ctx->reply.function_code, 1);
     ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
-    
+    uart_puts(UART_ID, "Function code received: ");
+    uart_putc(UART_ID, ctx->reply.function_code);
+    uart_puts(UART_ID, "\n");
+
+    uart_read_blocking(UART_ID_MAX485, &ctx->reply.data_length, 1);
+    ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
+    uart_puts(UART_ID, "Data length received: ");
+    char data_length_str[4];
+    snprintf(data_length_str, sizeof(data_length_str), "%d", ctx->reply.data_length);
+    uart_puts(UART_ID, data_length_str);
+    uart_puts(UART_ID, "\n");
+
     uart_read_blocking(UART_ID_MAX485, (uint8_t *)ctx->reply.data, ctx->reply.data_length);
     ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
+    uart_puts(UART_ID, "Data received: ");
+    char formatted_data[253]; // 252 bytes + null terminator
+    // dumb data hex formatting
+    for (int i = 0; i < ctx->reply.data_length; i++) {
+        snprintf(&formatted_data[i * 2], 3, "%02X", (unsigned char)ctx->reply.data[i]);
+    }
+    uart_puts(UART_ID, formatted_data);
+    uart_puts(UART_ID, "\n");
 
     ctx->state = MODBUS_RTU_PROCESSING_REPLY;
 }
@@ -219,4 +252,16 @@ void modbus_state_machine(ModbusRtuContext *ctx)
             modbus_action_turnaround_delay(ctx);
             break;
     }
+}
+
+void modbus_read_from_register(ModbusRtuContext *ctx, uint16_t register_address, uint16_t register_count)
+{
+    char data[4];
+    data[0] = (register_address >> 8) & 0xFF;
+    data[1] = register_address & 0xFF;
+    data[2] = (register_count >> 8) & 0xFF;
+    data[3] = register_count & 0xFF;
+    modbus_set_slave_address(ctx, (uint8_t)42);
+    modbus_build_request(ctx, 0x03, data, 4);
+    modbus_send_request(ctx);
 }

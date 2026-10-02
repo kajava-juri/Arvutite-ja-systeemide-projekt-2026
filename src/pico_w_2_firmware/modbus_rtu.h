@@ -30,7 +30,7 @@ typedef struct
     uint8_t function_code;
     char data[252];
     uint8_t crc[2];
-    int data_length;
+    uint8_t data_length;
 } ModbusRtuFrame;
 
 // modbus context structure
@@ -83,6 +83,8 @@ void modbus_send_request(ModbusRtuContext *context);
 void modbus_read_request(ModbusRtuContext *context);
 
 void modbus_state_machine(ModbusRtuContext *context);
+
+void modbus_read_from_register(ModbusRtuContext *context, uint16_t register_address, uint16_t register_count);
 
 uint16_t compute_crc_fast(uint8_t *message, size_t message_length);
 uint16_t compute_crc_simple(uint8_t *message, size_t message_length);
