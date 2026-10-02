@@ -4,6 +4,9 @@
 
 int one_request_sent = 0;
 
+// for why the CRC table values are the way they are, refer to modbus specification
+// https://www.modbus.org/file/secure/modbusoverserial.pdf
+
 /* Table of CRC values for high–order byte */
 static unsigned char auchCRCHi[] = {
     0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81,
