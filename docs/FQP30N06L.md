@@ -70,8 +70,10 @@ t ~ R_g * (C_gs + C_gd) ~ 220 Ohm * ~0.9 nF ~ 0.2 us
 Compared to the PWM period:
  
 ```
+Full gate charge time (rough):
+t_gate = Q_g / I_g(on) = 7 nC / 5.45 mA = 1.29 us
 T = 1 / 25 kHz = 40 us
-t_sw / T = 1.29 us / 40 us = 3.225 %
+t_sw / T = 1.29 us / 40 us = 3.2 %
 ```
 ### 4. Power dissipation
  
