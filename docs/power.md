@@ -3,6 +3,11 @@ Documentation on the power solutions used, reference the block diagram.
 ### Input Voltage Regulation
 
 #### Prototype
+
+Power budget tree:
+
+![Power budget tree](static/images/power_tree_budget.drawio.png)
+
 IC regulator with minimal configuration:
 ### [MC7824CT](https://www.mouser.com/catalog/specsheets/mc7800-d.pdf)
 
