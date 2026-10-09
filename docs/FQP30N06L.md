@@ -14,6 +14,7 @@ R_thJA = 62.5 C/W (TO-220)          T_j(max) = 175 C
 Miller plateau level at 0.1 A (square-law model, K(process transconductance parameter) fitted from the 32 A gate charge curve, V_th = 2 V):
  
 ```
+I_D = K (VGS − Vth)² so:
 K = I_D / (V_plateau - V_th)^2 = 32 A / (3.9 V - 2 V)^2 = 8.9 A/V^2
 V_plateau = V_th + sqrt(I_D / K) = 2 V + sqrt(0.1 A / 8.9 A/V^2) = 2.1 V
 ```
