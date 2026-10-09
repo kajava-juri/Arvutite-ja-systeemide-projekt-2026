@@ -57,8 +57,6 @@ Full gate charge time (rough):
 
 
 ```
-Ig(avg) = (V_drive − V_plateau) / Rg
-Ig(avg) = (3.3 - 2.1) / 220 = 5.45mA
 I_g(on) = (V_drive - V_plateau) / R_g = (3.3 V - 2.1 V) / 220 Ohm = 5.45 mA
 I_g(off) = V_plateau / R_g = 2.1 V / 220 Ohm = 9.5 mA
 t_on = Q_gd / I_g(on) = 3.6 nC / 5.45 mA = 0.66 us
