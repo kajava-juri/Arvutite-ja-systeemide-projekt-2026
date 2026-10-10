@@ -62,6 +62,7 @@ I_g(on) = (V_drive - V_plateau) / R_g = (3.3 V - 2.1 V) / 220 Ohm = 5.45 mA
 I_g(off) = V_plateau / R_g = 2.1 V / 220 Ohm = 9.5 mA
 t_on = Q_gd / I_g(on) = 3.6 nC / 5.45 mA = 0.66 us
 t_off = Q_gd / I_g(off) = 3.6 nC / 9.5 mA = 0.38 us
+
 ```
 Ig peak time 
 
@@ -72,9 +73,12 @@ Compared to the PWM period:
  
 ```
 Full gate charge time (rough):
-t_gate = Q_g / I_g(on) = 7 nC / 5.45 mA = 1.29 us
+t_sw = Q_g / I_g(on) = 7 nC / 5.45 mA = 1.29 us
 T = 1 / 25 kHz = 40 us
 t_sw / T = 1.29 us / 40 us = 3.2 %
+t_gate(off) = Q_g / I_g(off) = 7 nC / 9.5 mA = 0.74 us
+t_gate(off) / T = 0.74 us / 40 us = 1.8 %
+t_sw(total)=1.8+3.2~5%
 ```
 ### 4. Power dissipation
  
