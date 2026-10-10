@@ -52,6 +52,8 @@ int max485_send_data(uint8_t *data, size_t length)
 
     uart_tx_wait_blocking(max485_state.uart);
 
+    max485_set_transmit_mode(RECEIVE);
+
     return 0;
 }
 
@@ -70,13 +72,10 @@ int max485_receive_data(uint8_t *buffer, int timeout_us, size_t length)
     }
 
     size_t bytes_received = 0;
-    absolute_time_t start_time = get_absolute_time();
 
     while (bytes_received < length) {
         if (uart_is_readable_within_us(max485_state.uart, timeout_us)) {
             buffer[bytes_received++] = uart_getc(max485_state.uart);
-            // reset the timeout timer on each received byte
-            start_time = get_absolute_time();
         } else {
             if (bytes_received > 0) {
                 break;
@@ -85,10 +84,6 @@ int max485_receive_data(uint8_t *buffer, int timeout_us, size_t length)
                 return 0; // timeout with no data received
             }
         }
-    }
-
-    if (bytes_received < length) {
-        uart_puts(UART_ID, "Timeout reached before receiving all data\n");
     }
 
     return bytes_received; // return the number of bytes received
