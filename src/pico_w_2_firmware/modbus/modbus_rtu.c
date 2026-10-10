@@ -170,6 +170,15 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
     }
     ctx->reply.data_length = ctx->reply.data[2];
 
+    uint16_t received_crc = (uint8_t)ctx->reply.data[3 + ctx->reply.data_length] | ((uint8_t)ctx->reply.data[4 + ctx->reply.data_length] << 8);
+    uint16_t computed_crc = compute_crc_fast((uint8_t *)&ctx->reply.data, 3 + ctx->reply.data_length);
+
+    if (received_crc != computed_crc) {
+        uart_puts(UART_ID, "Invalid CRC in reply\n");
+        ctx->state = MODBUS_RTU_PROCESSING_ERROR;
+        return;
+    }
+
     // update data pointer to point to the actual data, skipping slave address and function code
     memmove(ctx->reply.data, ctx->reply.data + 3, ctx->reply.data_length);
 
