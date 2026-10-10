@@ -1,9 +1,9 @@
 #include "main.h"
 
 #include "common.h"
-#include "max485.h"
+#include "drivers/max485.h"
 #include <stdio.h>
-#include "modbus_rtu.h"
+#include "modbus/modbus_rtu.h"
 
 int main()
 {
@@ -20,7 +20,7 @@ int main()
 
 
     init_gpio_pins();
-    max485_init(UART_ID_MAX485);
+    max485_init(UART_ID_MAX485, RE_DE_PIN);
     max485_set_transmit_mode(TRANSMIT);
     // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
     ModbusRtuContext ctx = {0};
@@ -47,9 +47,6 @@ void init_gpio_pins()
     uart_set_hw_flow(UART_ID_MAX485, false, false);
     gpio_set_function(UART_TX_PIN_MAX485, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN_MAX485, GPIO_FUNC_UART);
-
-    gpio_init(RE_DE_PIN);
-    gpio_set_dir(RE_DE_PIN, GPIO_OUT);
 
     uart_puts(UART_ID, "pins initialized\n");
 }

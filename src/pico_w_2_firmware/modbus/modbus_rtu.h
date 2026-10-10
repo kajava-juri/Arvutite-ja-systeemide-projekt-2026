@@ -28,8 +28,7 @@ typedef struct
 {
     uint8_t slave_address;
     uint8_t function_code;
-    char data[252];
-    uint8_t crc[2];
+    char data[252 + 2]; // 252 bytes of data + 2 bytes for CRC
     uint8_t data_length;
 } ModbusRtuFrame;
 
@@ -85,6 +84,8 @@ void modbus_read_request(ModbusRtuContext *context);
 void modbus_state_machine(ModbusRtuContext *context);
 
 void modbus_read_from_register(ModbusRtuContext *context, uint16_t register_address, uint16_t register_count);
+
+void modbus_frame_serialize(ModbusRtuFrame *frame);
 
 uint16_t compute_crc_fast(uint8_t *message, size_t message_length);
 uint16_t compute_crc_simple(uint8_t *message, size_t message_length);

@@ -1,5 +1,6 @@
 #include "modbus_rtu.h"
-#include "max485.h"
+#include "modbus_function_codes.h"
+#include "drivers/max485.h"
 #include <string.h>
 
 int one_request_sent = 0;
@@ -96,9 +97,7 @@ void modbus_init(ModbusRtuContext *ctx)
 
 void modbus_action_idle(ModbusRtuContext *ctx)
 {
-    if(one_request_sent) {
-        return;
-    }
+    sleep_ms(1000);
     uart_puts(UART_ID, "Modbus RTU Idle state\n");
     // char *data = "Hello, Modbus!";
     // modbus_set_slave_address(ctx, (uint8_t)42);
@@ -108,35 +107,77 @@ void modbus_action_idle(ModbusRtuContext *ctx)
 
     ctx->state = MODBUS_RTU_WAITING_FOR_REPLY;
     uart_puts(UART_ID, "Waiting for reply from slave\n");
-    one_request_sent = 1;
 }
 
 void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
 {
-    max485_set_transmit_mode(RECEIVE);
-    // check uart for incoming data
-    if (uart_is_readable(UART_ID_MAX485)) {
-        // read the reply frame from MAX485
-        modbus_read_request(ctx);
-        ctx->state = MODBUS_RTU_PROCESSING_REPLY;
+    uart_puts(UART_ID, "Waiting for reply state\n");
+
+    int res;
+    // read slave address
+    res = max485_receive_data(&ctx->reply.slave_address, MODBUS_RTU_FRAME_START_END_DELAY_MS * 1000, 1);
+    if (res == 0) {
+        return; // timeout with no data received, stay in waiting for reply state
     }
+    if (res < 0) {
+        uart_puts(UART_ID, "Timeout or error receiving slave address\n");
+        ctx->state = MODBUS_RTU_PROCESSING_ERROR;
+        return;
+    }
+    ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
+
+    // read function code
+    res = max485_receive_data(&ctx->reply.function_code, MODBUS_RTU_FRAME_START_END_DELAY_MS * 1000, 1);
+    if (res <= 0) {
+        uart_puts(UART_ID, "Timeout or error receiving function code\n");
+        ctx->state = MODBUS_RTU_PROCESSING_ERROR;
+        return;
+    }
+    ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
+
+    // read data length
+    res = max485_receive_data(&ctx->reply.data_length, MODBUS_RTU_FRAME_START_END_DELAY_MS * 1000, 1);
+    if (res <= 0) {
+        uart_puts(UART_ID, "Timeout or error receiving data length\n");
+        ctx->state = MODBUS_RTU_PROCESSING_ERROR;
+        return;
+    }
+    ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
+
+    // read data
+    res = max485_receive_data((uint8_t *)ctx->reply.data, MODBUS_RTU_FRAME_START_END_DELAY_MS * 1000, ctx->reply.data_length);
+    if (res <= 0) {
+        uart_puts(UART_ID, "Timeout or error receiving data\n");
+        ctx->state = MODBUS_RTU_PROCESSING_ERROR;
+        return;
+    }
+    ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
+
+    // read CRC
+    res = max485_receive_data((uint8_t *)&ctx->reply.data[ctx->reply.data_length], MODBUS_RTU_FRAME_START_END_DELAY_MS * 1000, 2);
+    if (res <= 0) {
+        uart_puts(UART_ID, "Timeout or error receiving CRC\n");
+        ctx->state = MODBUS_RTU_PROCESSING_ERROR;
+        return;
+    }
+    ctx->last_received_byte_time = to_ms_since_boot(get_absolute_time());
+
+    ctx->state = MODBUS_RTU_PROCESSING_REPLY;
 }
 
 void modbus_action_processing_reply(ModbusRtuContext *ctx)
 {
+    uart_puts(UART_ID, "Processing reply state\n");
 
-    // uart_puts(UART_ID, "Processing reply from slave\n");
-    // uart_puts(UART_ID, "Slave address: ");
-    // uart_putc(UART_ID, ctx->reply.slave_address);
-    // uart_puts(UART_ID, "\nFunction code: ");
-    // uart_putc(UART_ID, ctx->reply.function_code);
-    // uart_puts(UART_ID, "\nData: ");
-    // uart_puts(UART_ID, ctx->reply.data);
-    // uart_puts(UART_ID, "\nData length: ");
-    // char data_length_str[4];
-    // snprintf(data_length_str, sizeof(data_length_str), "%d", ctx->reply.data_length);
-    // uart_puts(UART_ID, data_length_str);
-    // uart_puts(UART_ID, "\n");
+    char formatted_data[512];
+    snprintf(formatted_data, sizeof(formatted_data), "Reply from slave:\nSlave address: %d\nFunction code: %d\nData length: %d\nData: ", ctx->reply.slave_address, ctx->reply.function_code, ctx->reply.data_length);
+    for (int i = 0; i < ctx->reply.data_length; i++) {
+        char byte_str[4];
+        snprintf(byte_str, sizeof(byte_str), "%02X ", (unsigned char)ctx->reply.data[i]);
+        strncat(formatted_data, byte_str, sizeof(formatted_data) - strlen(formatted_data) - 1);
+    }
+    strncat(formatted_data, "\n", sizeof(formatted_data) - strlen(formatted_data) - 1);
+    uart_puts(UART_ID, formatted_data);
 
     ctx->state = MODBUS_RTU_IDLE;
 }
@@ -169,33 +210,50 @@ int modbus_build_request(ModbusRtuContext *ctx, uint8_t function_code, const cha
 
     // because of how the ModbusRtuFrame struct is defined, the first two bytes are the slave address and function code, followed by the data
     // this can be used to generate the CRC for the request frame
-    uint16_t crc_value = compute_crc_fast((uint8_t *)&ctx->request, 2 + data_length); // 2 bytes + data length
+    // uint16_t crc_value = compute_crc_fast((uint8_t *)&ctx->request, 2 + data_length); // 2 bytes + data length
 
-    ctx->request.crc[0] = crc_value & 0xFF; // low byte
-    ctx->request.crc[1] = (crc_value >> 8) & 0xFF; // high byte
+    // ctx->request.crc[0] = crc_value & 0xFF; // low byte
+    // ctx->request.crc[1] = (crc_value >> 8) & 0xFF; // high byte
 
     return 0;
 }
 
+// void modbus_send_request(ModbusRtuContext *ctx)
+// {
+//     max485_set_transmit_mode(TRANSMIT);
+//     sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS);
+//     // Send the request frame over MAX485
+//     // send slave address
+//     //uart_write_blocking(UART_ID_MAX485, &ctx->request.slave_address, 1);;
+//     max485_send_data(&ctx->request.slave_address, 1);
+//     // send function code
+//     max485_send_data(&ctx->request.function_code, 1);
+//     // send data
+//     //uart_write_blocking(UART_ID_MAX485, (uint8_t *)ctx->request.data, ctx->request.data_length);
+//     max485_send_data((uint8_t *)ctx->request.data, ctx->request.data_length);
+//     // send CRC
+//     max485_send_data(ctx->request.crc, 2);
+
+//     uart_tx_wait_blocking(UART_ID_MAX485);
+
+//     max485_set_transmit_mode(RECEIVE);
+// }
+
+void modbus_frame_serialize(ModbusRtuFrame *frame)
+{
+    uint16_t crc_value = compute_crc_fast((uint8_t *)frame, 2 + frame->data_length);
+    frame->data[frame->data_length]     = crc_value & 0xFF;   // low byte first
+    frame->data[frame->data_length + 1] = (crc_value >> 8) & 0xFF;
+}
+
+
 void modbus_send_request(ModbusRtuContext *ctx)
 {
-    max485_set_transmit_mode(TRANSMIT);
+    modbus_frame_serialize(&ctx->request);
     sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS);
-    // Send the request frame over MAX485
-    // send slave address
-    //uart_write_blocking(UART_ID_MAX485, &ctx->request.slave_address, 1);;
-    max485_send_data(&ctx->request.slave_address, 1);
-    // send function code
-    max485_send_data(&ctx->request.function_code, 1);
-    // send data
-    //uart_write_blocking(UART_ID_MAX485, (uint8_t *)ctx->request.data, ctx->request.data_length);
-    max485_send_data((uint8_t *)ctx->request.data, ctx->request.data_length);
-    // send CRC
-    max485_send_data(ctx->request.crc, 2);
+    // later call ensure_rtu_frame_start_end_delay()
 
-    uart_tx_wait_blocking(UART_ID_MAX485);
-
-    max485_set_transmit_mode(RECEIVE);
+    max485_send_data((uint8_t *)&ctx->request, 2 + ctx->request.data_length + 2); // slave address + function code + data + CRC
 }
 
 void modbus_read_request(ModbusRtuContext *ctx)
@@ -232,8 +290,6 @@ void modbus_read_request(ModbusRtuContext *ctx)
     }
     uart_puts(UART_ID, formatted_data);
     uart_puts(UART_ID, "\n");
-
-    ctx->state = MODBUS_RTU_PROCESSING_REPLY;
 }
 
 void modbus_state_machine(ModbusRtuContext *ctx)
