@@ -18,7 +18,6 @@ int main()
     // Example to turn on the Pico W LED
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
-
     init_gpio_pins();
     max485_init(UART_ID_MAX485, RE_DE_PIN);
     max485_set_transmit_mode(TRANSMIT);
@@ -26,8 +25,28 @@ int main()
     ModbusRtuContext ctx = {0};
     modbus_init(&ctx);
 
+    int modbus_res = 0;
+    bool error_active = false;
+    bool led_on = true;
+    absolute_time_t next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
+
     while (true) {
-        modbus_state_machine(&ctx);
+        int modbus_res = modbus_state_machine(&ctx);
+
+        if (modbus_res == MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED) {
+            error_active = true;
+        } else if (modbus_res >= 0) {   // your "valid reply received" code
+            error_active = false;
+            led_on = true;                          // back to solid on
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
+        }
+
+        if (error_active && time_reached(next_toggle)) {
+            led_on = !led_on;
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
+            next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
+        }
+
         sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS * 2);
     }
 }

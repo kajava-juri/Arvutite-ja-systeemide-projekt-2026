@@ -13,10 +13,24 @@ typedef enum
     MODBUS_RTU_MAX_STATES
 } ModbusRtuState;
 
+typedef enum {
+    MODBUS_RTU_ERROR_NONE = 0,
+    MODBUS_RTU_ERROR_TIMEOUT = -1,
+    MODBUS_RTU_ERROR_INVALID_FUNCTION_CODE = -2,
+    MODBUS_RTU_ERROR_INVALID_DATA_LENGTH = -3,
+    MODBUS_RTU_ERROR_INVALID_CRC = -4,
+    MODBUS_RTU_ERROR_SLAVE_EXCEPTION = -5,
+    MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED = -6,
+} ModbusRtuError;
+
 // start and end is defined as 3.5 character times
 // for baudrate 9600, considering 8 data, 2 stop and 1 start bit = 11 bits
 // (3.5 * 11) / 9600 = 4.01 ms
 #define MODBUS_RTU_FRAME_START_END_DELAY_MS 5
+
+#define MODBUS_RTU_REPLY_TIMEOUT_MS 1000
+#define MODBUS_RTU_MAX_RETRIES 5
+#define POLLING_INTERVAL_MS 1000
 
 // each byte is sent least significant bit first
 // contains 2 4 bit hex characters
@@ -30,6 +44,7 @@ typedef struct
     uint8_t function_code;
     char data[252 + 2]; // 252 bytes of data + 2 bytes for CRC
     uint8_t data_length;
+    uint8_t exception_code;
 } ModbusRtuFrame;
 
 // modbus context structure
@@ -38,7 +53,9 @@ typedef struct
     ModbusRtuState state;
     ModbusRtuFrame request;
     ModbusRtuFrame reply;
-    uint32_t last_received_byte_time;
+    uint32_t last_request_time;
+    ModbusRtuError pending_error;
+    uint8_t retry_count;
 } ModbusRtuContext;
 
 void modbus_init(ModbusRtuContext *ctx);
@@ -81,9 +98,9 @@ int modbus_build_request(ModbusRtuContext *context, uint8_t function_code, const
 void modbus_send_request(ModbusRtuContext *context);
 void modbus_read_request(ModbusRtuContext *context);
 
-void modbus_state_machine(ModbusRtuContext *context);
+int modbus_state_machine(ModbusRtuContext *context);
 
-void modbus_read_from_register(ModbusRtuContext *context, uint16_t register_address, uint16_t register_count);
+void modbus_read_from_holding_registers(ModbusRtuContext *context, uint16_t register_address, uint16_t register_count);
 
 void modbus_frame_serialize(ModbusRtuFrame *frame);
 

@@ -93,17 +93,20 @@ uint16_t compute_crc_fast(uint8_t *message, size_t message_length)
 void modbus_init(ModbusRtuContext *ctx)
 {
     ctx->state = MODBUS_RTU_IDLE;
+    ctx->pending_error = MODBUS_RTU_ERROR_NONE;
+    ctx->retry_count = 0;
 }
 
 void modbus_action_idle(ModbusRtuContext *ctx)
 {
-    sleep_ms(1000);
     uart_puts(UART_ID, "Modbus RTU Idle state\n");
-    // char *data = "Hello, Modbus!";
-    // modbus_set_slave_address(ctx, (uint8_t)42);
-    // modbus_build_request(ctx, 0x03, data, strlen(data));
-    // modbus_send_request(ctx);
-    modbus_read_from_register(ctx, 0x0000, 1);
+    
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
+    if(current_time - ctx->last_request_time < POLLING_INTERVAL_MS) {
+        return; // not enough time has passed since last request
+    }
+
+    modbus_read_from_holding_registers(ctx, 0x0000, 3);
 
     ctx->state = MODBUS_RTU_WAITING_FOR_REPLY;
     uart_puts(UART_ID, "Waiting for reply from slave\n");
@@ -113,11 +116,25 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
 {
     uart_puts(UART_ID, "Waiting for reply state\n");
 
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
+    if (current_time - ctx->last_request_time > MODBUS_RTU_REPLY_TIMEOUT_MS) {
+        uart_puts(UART_ID, "Timeout waiting for reply\n");
+        ctx->state = MODBUS_RTU_PROCESSING_ERROR;
+        ctx->pending_error = MODBUS_RTU_ERROR_TIMEOUT;
+        return;
+    }
+
     int res;
     // read function code
     res = max485_receive_data((uint8_t *)&ctx->reply.data, MODBUS_RTU_FRAME_START_END_DELAY_MS * 1000, sizeof(ctx->reply.data));
 
     if (res == 0) {
+        ctx->retry_count++;
+        if (ctx->retry_count > MODBUS_RTU_MAX_RETRIES) {
+            ctx->state = MODBUS_RTU_PROCESSING_ERROR;
+            ctx->pending_error = MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED;
+            return;
+        }
         return; // timeout with no data received, stay in waiting for reply state
     }
     if (res < 0) {
@@ -141,6 +158,7 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
 
     if (ctx->reply.function_code != ctx->request.function_code) {
         uart_puts(UART_ID, "Invalid function code in reply\n");
+        ctx->reply.exception_code = ctx->reply.data[2];
         ctx->state = MODBUS_RTU_PROCESSING_ERROR;
         return;
     }
@@ -177,7 +195,8 @@ void modbus_action_processing_reply(ModbusRtuContext *ctx)
 
 void modbus_action_processing_error(ModbusRtuContext *ctx)
 {
-    uart_puts(UART_ID, "Error processing reply from slave\n");
+    uint8_t error_code = ctx->request.function_code;
+    uint8_t exception_code = ctx->reply.exception_code;
 }
 
 void modbus_action_turnaround_delay(ModbusRtuContext *ctx)
@@ -219,9 +238,10 @@ void modbus_send_request(ModbusRtuContext *ctx)
     // later call ensure_rtu_frame_start_end_delay()
 
     max485_send_data((uint8_t *)&ctx->request, 2 + ctx->request.data_length + 2); // slave address + function code + data + CRC
+    ctx->last_request_time = to_ms_since_boot(get_absolute_time());
 }
 
-void modbus_state_machine(ModbusRtuContext *ctx)
+int modbus_state_machine(ModbusRtuContext *ctx)
 {
     switch (ctx->state) {
         case MODBUS_RTU_IDLE:
@@ -240,9 +260,11 @@ void modbus_state_machine(ModbusRtuContext *ctx)
             modbus_action_turnaround_delay(ctx);
             break;
     }
+
+    return ctx->pending_error;
 }
 
-void modbus_read_from_register(ModbusRtuContext *ctx, uint16_t register_address, uint16_t register_count)
+void modbus_read_from_holding_registers(ModbusRtuContext *ctx, uint16_t register_address, uint16_t register_count)
 {
     char data[4];
     data[0] = (register_address >> 8) & 0xFF;
