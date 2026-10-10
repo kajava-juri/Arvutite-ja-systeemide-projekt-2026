@@ -27,11 +27,6 @@ int max485_send_data(uint8_t *data, size_t length)
         return -1; // not initialized
     }
 
-    // if (max485_state.mode != TRANSMIT) {
-    //     uart_puts(UART_ID, "Not in transmit mode\n");
-    //     return -1; // not in transmit mode
-    // }
-
     max485_set_transmit_mode(TRANSMIT);
 
     if (!data || length == 0) {
@@ -89,15 +84,3 @@ int max485_receive_data(uint8_t *buffer, int timeout_us, size_t length)
     return bytes_received; // return the number of bytes received
 }
 
-// void max485_receive_data(uint8_t *buffer, size_t length)
-// {
-//     max485_set_transmit_mode(RECEIVE);
-//     if (uart_is_readable(max485_state.uart)) {
-//         uart_puts(UART_ID, "Data received from slave\n");
-//         // read data until the specified length is reached
-//         size_t bytes_read = 0;
-//         while (bytes_read < length) {
-            
-//         }
-//     }
-// }

@@ -272,6 +272,6 @@ void modbus_read_from_holding_registers(ModbusRtuContext *ctx, uint16_t register
     data[2] = (register_count >> 8) & 0xFF;
     data[3] = register_count & 0xFF;
     modbus_set_slave_address(ctx, (uint8_t)42);
-    modbus_build_request(ctx, 0x03, data, 4);
+    modbus_build_request(ctx, MODBUS_FC_READ_HOLDING_REGISTERS, data, 4);
     modbus_send_request(ctx);
 }
