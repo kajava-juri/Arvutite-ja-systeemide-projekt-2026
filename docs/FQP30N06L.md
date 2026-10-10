@@ -79,6 +79,11 @@ t_sw / T = 1.29 us / 40 us = 3.2 %
 t_gate(off) = Q_g / I_g(off) = 7 nC / 9.5 mA = 0.74 us
 t_gate(off) / T = 0.74 us / 40 us = 1.8 %
 t_sw(total)=1.8+3.2~5%
+
+or
+15ma/2=7.5mA
+7nC/7.5mA~0.93us
+0.93*2/40~4.65%
 ```
 ### 4. Power dissipation
  
