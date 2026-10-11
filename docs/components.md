@@ -12,6 +12,12 @@ Description of protocols, components choice, and modules used. For the overview 
 | [SN75176](https://www.ti.com/lit/ds/symlink/sn75176a.pdf?ts=1789015653049) |             |        |           |                                                                                                                                                  |
 | SP3485                                                                     |             | serial | waveshare | [link](https://www.waveshare.com/wiki/Pico-2CH-RS485)                                                                                            |
 
+#### MAX485
+
+RE pin is inverted, RE and DE can be tied together into one digital pin
+
+![max485 pin function](max485_pin_function.png)
+
 ## Fan / Actuator
 
 

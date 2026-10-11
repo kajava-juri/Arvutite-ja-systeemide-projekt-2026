@@ -3,15 +3,21 @@ Documentation on the power solutions used, reference the block diagram.
 ### Input Voltage Regulation
 
 #### Prototype
+
+![[prototype_power_rails.png]]
+
 IC regulator with minimal configuration:
 ### [MC7824CT](https://www.mouser.com/catalog/specsheets/mc7800-d.pdf)
 
 ![Power dissipation to ambient temperature](static/images/mc7824ct_power_dissipation.png)
 
 With no heatsink at 50 degrees 1.8 W dissipation is the worst case. Using $\theta_{JA}$ = $65 \degree C/W$ and $\theta_{JC} = 5 \degree C/W$, summing them up gives $70 \degree C/W$ and headroom of $80 \degree C/W$. Considering the 12 V mock-up fan speed at maximum takes (depending on the fan):
-- fan motor - 200 mA - 500 mA
+- fan motor - 100 mA - 500 mA
 - qbm68 sensor - 25 mA
 - Pico 2 microcontroller 40 mA (over 100 mA when using radio)
+
+**Scenario 1 - absolute maximum with no radio**
+$$I_{total} = I_{qbm} + I_{motor} + I_{pico} + I_{MAX485}$$
 
 Assuming a powerful fan and no radio that would be 600 mA. A linear regulator of more than 3 V would need a heatsink. 
 
