@@ -37,8 +37,8 @@ pico_sdk_init()
 
 add_executable(pico_w_2_firmware
         main.c
-        max485.c
-        modbus_rtu.c
+        drivers/max485.c
+        modbus/modbus_rtu.c
 )
 
 pico_set_program_name(pico_w_2_firmware "pico_w_2_firmware")

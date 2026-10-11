@@ -18,9 +18,9 @@
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
 
-#define UART_TX_PIN_MAX485 8
-#define UART_RX_PIN_MAX485 9
+#define UART_TX_PIN_MAX485 20
+#define UART_RX_PIN_MAX485 21
 
-#define RE_DE_PIN 15
+#define RE_DE_PIN 18
 
 #endif // COMMON_H

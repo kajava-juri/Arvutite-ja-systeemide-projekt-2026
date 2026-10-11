@@ -1,9 +1,9 @@
 #include "main.h"
 
 #include "common.h"
-#include "max485.h"
+#include "drivers/max485.h"
 #include <stdio.h>
-#include "modbus_rtu.h"
+#include "modbus/modbus_rtu.h"
 
 int main()
 {
@@ -18,16 +18,35 @@ int main()
     // Example to turn on the Pico W LED
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
-
     init_gpio_pins();
-    max485_init(UART_ID_MAX485);
+    max485_init(UART_ID_MAX485, RE_DE_PIN);
     max485_set_transmit_mode(TRANSMIT);
     // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
     ModbusRtuContext ctx = {0};
     modbus_init(&ctx);
 
+    int modbus_res = 0;
+    bool error_active = false;
+    bool led_on = true;
+    absolute_time_t next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
+
     while (true) {
-        modbus_state_machine(&ctx);
+        int modbus_res = modbus_state_machine(&ctx);
+
+        if (modbus_res == MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED) {
+            error_active = true;
+        } else if (modbus_res >= 0) {   // your "valid reply received" code
+            error_active = false;
+            led_on = true;                          // back to solid on
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
+        }
+
+        if (error_active && time_reached(next_toggle)) {
+            led_on = !led_on;
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
+            next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
+        }
+
         sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS * 2);
     }
 }
@@ -47,9 +66,6 @@ void init_gpio_pins()
     uart_set_hw_flow(UART_ID_MAX485, false, false);
     gpio_set_function(UART_TX_PIN_MAX485, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN_MAX485, GPIO_FUNC_UART);
-
-    gpio_init(RE_DE_PIN);
-    gpio_set_dir(RE_DE_PIN, GPIO_OUT);
 
     uart_puts(UART_ID, "pins initialized\n");
 }

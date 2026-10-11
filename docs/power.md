@@ -5,6 +5,9 @@ Documentation on the power solutions used, reference the block diagram.
 #### Prototype
 
 ![[prototype_power_rails.png]]
+Power budget tree:
+
+![Power budget tree](static/images/power_tree_budget.drawio.png)
 
 IC regulator with minimal configuration:
 ### [MC7824CT](https://www.mouser.com/catalog/specsheets/mc7800-d.pdf)
