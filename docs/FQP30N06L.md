@@ -11,7 +11,7 @@ R_thJA = 62.5 C/W (TO-220)          T_j(max) = 175 C
  
 ### 1. Gate drive check
  
-Miller plateau level at 0.1 A (square-law model, K(process transconductance parameter) fitted from the 32 A gate charge curve, V_th = 2 V):
+Miller plateau level at 0.1 A (square-law model, K(device transconductance parameter) fitted from the 32 A gate charge curve, V_th = 2 V):
  
 ```
 I_D = K (VGS − Vth)² so:
@@ -36,7 +36,7 @@ Q_gs = C_gs * V_plateau = 0.74 nF * 2.1 V = 1.5 nC
 Miller charge:
  
 ```
-Q_gd = integral(C_gd dV_DS) = 3.6 nC
+Q_gd = 3.1 nC (midpoint between the AI calculated C_rss integral, 3.6 nC, and the LTspice simulation, 2.65 nC)
 ```
  
 Charge from the plateau to 3.3 V (V_DS is ~0, C_iss = 1.75 nF):
@@ -48,14 +48,10 @@ Q_post = C_iss * (3.3 V - 2.1 V) = 1.75 nF * 1.2 V = 2.1 nC
 Total:
  
 ```
-Q_g(3.3 V) = Q_gs + Q_gd + Q_post = 1.5 + 3.6 + 2.1 = ~7 nC
+Q_g(3.3 V) = Q_gs + Q_gd + Q_post = 1.5 + 3.1 + 2.1 = ~7 nC
 ```
  
 ### 3. Switching time
- 
-Gate current is limited by the GPIO, not by R_g (3.3 V / 220 Ohm = 15 mA would be more than the pin delivers):
-Full gate charge time (rough): 
-
 
 ```
 I_g(on) = (V_drive - V_plateau) / R_g = (3.3 V - 2.1 V) / 220 Ohm = 5.45 mA
@@ -73,9 +69,9 @@ Compared to the PWM period:
  
 ```
 Full gate charge time (rough):
-t_sw = Q_g / I_g(on) = 7 nC / 5.45 mA = 1.29 us
 T = 1 / 25 kHz = 40 us
-t_sw / T = 1.29 us / 40 us = 3.2 %
+t_sw(on) = Q_g / I_g(on) = 7 nC / 5.45 mA = 1.29 us
+t_sw(on) / T = 1.29 us / 40 us = 3.2 %
 t_gate(off) = Q_g / I_g(off) = 7 nC / 9.5 mA = 0.74 us
 t_gate(off) / T = 0.74 us / 40 us = 1.8 %
 t_sw(total)=1.8+3.2~5%
