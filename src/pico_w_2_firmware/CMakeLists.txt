@@ -39,6 +39,7 @@ add_executable(pico_w_2_firmware
         main.c
         drivers/max485.c
         modbus/modbus_rtu.c
+        core1_main.c
 )
 
 pico_set_program_name(pico_w_2_firmware "pico_w_2_firmware")
@@ -50,7 +51,8 @@ pico_enable_stdio_uart(pico_w_2_firmware 0)
 
 # Add the standard library to the build
 target_link_libraries(pico_w_2_firmware
-        pico_stdlib)
+        pico_stdlib
+        pico_multicore)
 
 # Add the standard include files to the build
 target_include_directories(pico_w_2_firmware PRIVATE

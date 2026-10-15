@@ -29,7 +29,7 @@ typedef enum {
 #define MODBUS_RTU_FRAME_START_END_DELAY_MS 5
 
 #define MODBUS_RTU_REPLY_TIMEOUT_MS 1000
-#define MODBUS_RTU_MAX_RETRIES 5
+#define MODBUS_RTU_MAX_RETRIES 5000
 #define POLLING_INTERVAL_MS 1000
 
 // each byte is sent least significant bit first

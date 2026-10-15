@@ -47,6 +47,8 @@ int max485_send_data(uint8_t *data, size_t length)
 
     uart_tx_wait_blocking(max485_state.uart);
 
+    sleep_us(120);
+
     max485_set_transmit_mode(RECEIVE);
 
     return 0;

@@ -10,7 +10,7 @@
 // By default the stdout UART is `uart0`, so we will use the second one
 #define UART_ID uart0
 #define UART_ID_MAX485 uart1
-#define BAUD_RATE 9600 // 115200
+#define BAUD_RATE 115200 // 115200
 #define BAUD_RATE_MAX485 9600
 
 // Use pins 0 and 1 for UART0

@@ -4,6 +4,8 @@
 #include "drivers/max485.h"
 #include <stdio.h>
 #include "modbus/modbus_rtu.h"
+#include <pico/multicore.h>
+#include "pico/util/queue.h"
 
 int main()
 {
@@ -15,12 +17,14 @@ int main()
         return -1;
     }
 
+    multicore_launch_core1(core1_entry);
+
     // Example to turn on the Pico W LED
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
     init_gpio_pins();
     max485_init(UART_ID_MAX485, RE_DE_PIN);
-    max485_set_transmit_mode(TRANSMIT);
+    max485_set_transmit_mode(RECEIVE);
     // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
     ModbusRtuContext ctx = {0};
     modbus_init(&ctx);
