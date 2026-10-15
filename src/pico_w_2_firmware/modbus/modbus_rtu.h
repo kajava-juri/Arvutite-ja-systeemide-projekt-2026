@@ -51,12 +51,20 @@ typedef struct
 typedef struct
 {
     ModbusRtuState state;
+    ModbusRtuState previous_state;
+    bool entered_state;
     ModbusRtuFrame request;
     ModbusRtuFrame reply;
     uint32_t last_request_time;
     ModbusRtuError pending_error;
     uint8_t retry_count;
 } ModbusRtuContext;
+
+typedef struct
+{
+    void (*on_entry)(ModbusRtuContext *ctx);
+    void (*on_run)(ModbusRtuContext *ctx);
+} StateHandle;
 
 void modbus_init(ModbusRtuContext *ctx);
 
@@ -67,6 +75,8 @@ void modbus_init(ModbusRtuContext *ctx);
  */
 void modbus_action_idle(ModbusRtuContext *ctx);
 
+void modbus_action_entry_idle(ModbusRtuContext *ctx);
+
 /**
  * When a unicast request is sent to a slave, the master goes into "Waiting for reply" state, and a “Response Time-out” is started. It 
  * prevents the Master from staying indefinitely in "Waiting for reply" state. Value of the Response time-out is application dependant.
@@ -76,7 +86,12 @@ void modbus_action_idle(ModbusRtuContext *ctx);
  * unexpected slave, the Response time-out is kept running. In case of an error detected on the frame, a retry may be performed.
  */
 void modbus_action_waiting_for_reply(ModbusRtuContext *ctx);
+
+void modbus_action_entry_waiting_for_reply(ModbusRtuContext *ctx);
+
 void modbus_action_processing_reply(ModbusRtuContext *ctx);
+
+void modbus_action_entry_processing_reply(ModbusRtuContext *ctx);
 
 /**
  * When a broadcast request is sent on the serial bus, no response is returned from the slaves. Nevertheless a delay is respected 
@@ -92,17 +107,21 @@ void modbus_action_turnaround_delay(ModbusRtuContext *ctx);
  */
 void modbus_action_processing_error(ModbusRtuContext *ctx);
 
+void modbus_action_entry_processing_error(ModbusRtuContext *ctx);
+
 int modbus_set_slave_address(ModbusRtuContext *context, uint8_t slave_address);
 int modbus_build_request(ModbusRtuContext *context, uint8_t function_code, const char *data, int data_length);
 
-void modbus_send_request(ModbusRtuContext *context);
-void modbus_read_request(ModbusRtuContext *context);
+int modbus_send_request(ModbusRtuContext *context);
 
 int modbus_state_machine(ModbusRtuContext *context);
 
 void modbus_read_from_holding_registers(ModbusRtuContext *context, uint16_t register_address, uint16_t register_count);
 
 void modbus_frame_serialize(ModbusRtuFrame *frame);
+
+void set_state(ModbusRtuContext *context, ModbusRtuState state);
+void enter_state(ModbusRtuContext *context, ModbusRtuState state);
 
 uint16_t compute_crc_fast(uint8_t *message, size_t message_length);
 uint16_t compute_crc_simple(uint8_t *message, size_t message_length);
