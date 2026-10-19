@@ -95,6 +95,12 @@ $$I_{max}(25\ ^\circ\text{C}) = \frac{-0.6 + \sqrt{0.36 + 0.14 \cdot 2.4}}{0.07}
 
 $$I_{max}(60\ ^\circ\text{C}) = \frac{-0.6 + \sqrt{0.36 + 0.14 \cdot 1.84}}{0.07} \approx 2.66\ \text{A}$$
 
+For $V = 24 \text{ V}$
+
+$$I_{max}(25\ ^\circ\text{C}) = \frac{-0.6 + \sqrt{1.2 + 0.14 \cdot 2.4}}{0.07} \approx 1.895\ \text{A}$$
+
+$$I_{max}(60\ ^\circ\text{C}) = \frac{-0.6 + \sqrt{1.2 + 0.14 \cdot 1.84}}{0.07} \approx 1.47\ \text{A}$$
+
 
 ### 5. Thermal calculation
 
