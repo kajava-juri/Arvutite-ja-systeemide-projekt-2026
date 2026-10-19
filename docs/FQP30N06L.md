@@ -75,7 +75,7 @@ $$P_d = P_{sw} + P_{cond} = 60\ \text{mW} + 0.35\ \text{mW} = 60.35\ \text{mW}$$
 in form of functions:
 $$p_s(V, I) + p_c(I) = p_t$$
 
-#### Maximum current as a function of voltage
+#### 4.1 Maximum current as a function of voltage
 
 $p_s(x,y)$ can be simplified: $4\mu s \cdot 25 \text{ kHz} = 0.1$
 
