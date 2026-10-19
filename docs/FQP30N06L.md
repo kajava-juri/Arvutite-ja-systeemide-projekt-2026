@@ -2,9 +2,10 @@
  
 Load: 12 V fan, 0.1 A, PWM 25 kHz.
 
-$$\begin{aligned}
+```math
+\begin{aligned}
 V_{supply} &= 12\ \text{V} \\
-V_{drive} &= 3.3 \text{V} \\
+V_{drive} &= 3.3\ \text{V} \\
 I_{load} &= 0.1\ \text{A} \\
 f_{PWM} &= 25\ \text{kHz} \\
 V_{th} &= 1.0 \ldots 2.5\ \text{V} \quad \text{(datasheet)} \\
@@ -12,7 +13,8 @@ R_g &= 220\ \Omega \\
 R_{DS(on)} &= 35\ \text{m}\Omega \quad \text{(from datasheet)} \\
 R_{thJA} &= 62.5\ ^\circ\text{C/W} \quad \text{(TO-220)} \\
 T_{j(max)} &= 175\ ^\circ\text{C}
-\end{aligned}$$
+\end{aligned}
+```
 ---
 
 $$V_{load} = V_{supply} - I_{load} \cdot R_{DS(on)}$$
