@@ -4,12 +4,14 @@
 #include "drivers/max485.h"
 #include <stdio.h>
 #include "modbus/modbus_rtu.h"
+#include "modbus/modbus.h"
 #include <pico/multicore.h>
 #include "pico/util/queue.h"
+#include "devices/qbm68.h"
 
 static int rtu_read(void *dev, uint8_t *buffer, size_t max_length)
 {
-    return max485_receive_data((Max485State *)dev, buffer, MODBUS_RTU_REPLY_TIMEOUT_MS * 1000, max_length);
+    return max485_receive_data((Max485State *)dev, buffer, MODBUS_RTU_FRAME_START_END_DELAY_MS * 1000, max_length);
 }
 
 static int rtu_write(void *dev, uint8_t *data, size_t length)
@@ -49,15 +51,34 @@ int main()
     ctx.transport = transport;
     modbus_rtu_init(&ctx);
 
+    ModbusContext mb = {
+        .rtu = ctx,
+        .regs = {0},
+        .callback = NULL,
+        .user_data = NULL
+    };
+
     int modbus_res = 0;
     bool error_active = false;
     bool led_on = true;
     absolute_time_t next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
 
-    while (true) {
-        int modbus_res = modbus_rtu_state_machine(&ctx);
+    Qbm68 qbm68_device = {
+        .mb = &mb,
+        .slave = 41,
+        .pending = false,
+        .last_request_ms = 0,
+        .pressure_raw = 0,
+        .pressure = 0.0f,
+        .updated_ms = 0,
+        .last_status = MB_STATUS_OK
+    };
 
-        if (modbus_res == MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED) {
+    while (true) {
+        ModbusStatus modbus_res = modbus_task(&mb);
+        qbm68_task(&qbm68_device);
+
+        if (modbus_res == MB_RETRIES_EXCEEDED || modbus_res == MB_TIMEOUT || modbus_res == MB_TRANSPORT_ERROR) {
             error_active = true;
         } else if (modbus_res >= 0) {   // your "valid reply received" code
             error_active = false;
@@ -71,7 +92,7 @@ int main()
             next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
         }
 
-        sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS * 2);
+        sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS);
     }
 }
 

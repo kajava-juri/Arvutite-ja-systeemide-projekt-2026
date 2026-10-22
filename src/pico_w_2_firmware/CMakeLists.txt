@@ -41,6 +41,7 @@ add_executable(pico_w_2_firmware
         modbus/modbus_rtu.c
         modbus/modbus.c
         core1_main.c
+        devices/qbm68.c
 )
 
 pico_set_program_name(pico_w_2_firmware "pico_w_2_firmware")

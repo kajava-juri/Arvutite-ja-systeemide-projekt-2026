@@ -66,6 +66,9 @@ typedef struct
     ModbusRtuError pending_error;
     uint8_t retry_count;
     ModbusRtuTransport transport;
+
+    bool done; // flag that indicates the reply is ready to be processed or an error occurred
+    ModbusRtuError result; // result of the last operation, MODBUS_RTU_ERROR_NONE if no error occurred
 } ModbusRtuContext;
 
 typedef struct
@@ -122,9 +125,7 @@ int modbus_rtu_build_request(ModbusRtuContext *context, uint8_t function_code, c
 
 int modbus_rtu_send_request(ModbusRtuContext *context);
 
-int modbus_rtu_state_machine(ModbusRtuContext *context);
-
-void modbus_rtu_read_from_holding_registers(ModbusRtuContext *context, uint16_t register_address, uint16_t register_count);
+ModbusRtuError modbus_rtu_state_machine(ModbusRtuContext *context);
 
 void modbus_rtu_frame_serialize(ModbusRtuFrame *frame);
 
@@ -133,5 +134,8 @@ void enter_state(ModbusRtuContext *context, ModbusRtuState state);
 
 uint16_t compute_crc_fast(uint8_t *message, size_t message_length);
 uint16_t compute_crc_simple(uint8_t *message, size_t message_length);
+
+// consume the done flag and return the result
+bool modbus_rtu_take_result(ModbusRtuContext *ctx, ModbusRtuError *result);
 
 #endif // MODBUS_RTU_H
