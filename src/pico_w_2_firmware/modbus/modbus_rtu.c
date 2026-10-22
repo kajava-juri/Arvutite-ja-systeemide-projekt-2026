@@ -1,6 +1,5 @@
 #include "modbus_rtu.h"
 #include "modbus_function_codes.h"
-#include "drivers/max485.h"
 #include <string.h>
 
 const StateHandle state_handlers[MODBUS_RTU_MAX_STATES] = {
@@ -151,8 +150,7 @@ void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)
 
     int res;
     // read function code
-    res = max485_receive_data(ctx->transport.dev, (uint8_t *)&ctx->reply.data, (MODBUS_RTU_FRAME_START_END_DELAY_MS) * 1000, sizeof(ctx->reply.data));
-    // res = ctx->transport.read(ctx->transport.dev, (uint8_t *)&ctx->reply.data, sizeof(ctx->reply.data));
+    res = ctx->transport.read(ctx->transport.dev, (uint8_t *)&ctx->reply.data, sizeof(ctx->reply.data));
 
     if (res == 0) {
         ctx->retry_count++;
@@ -312,8 +310,7 @@ int modbus_rtu_send_request(ModbusRtuContext *ctx)
     sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS);
     // later call ensure_rtu_frame_start_end_delay()
 
-    // int res = ctx->transport.write(ctx->transport.dev, (uint8_t *)&ctx->request, 2 + ctx->request.data_length + 2); // slave address + function code + data + CRC
-    int res = max485_send_data(ctx->transport.dev, (uint8_t *)&ctx->request, 2 + ctx->request.data_length + 2); // slave address + function code + data + CRC
+    int res = ctx->transport.write(ctx->transport.dev, (uint8_t *)&ctx->request, 2 + ctx->request.data_length + 2); // slave address + function code + data + CRC
     ctx->last_request_time = to_ms_since_boot(get_absolute_time());
 
     return res;
