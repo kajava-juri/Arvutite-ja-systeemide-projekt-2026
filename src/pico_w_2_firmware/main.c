@@ -7,6 +7,16 @@
 #include <pico/multicore.h>
 #include "pico/util/queue.h"
 
+static int rtu_read(void *dev, uint8_t *buffer, size_t max_length)
+{
+    return max485_receive_data((Max485State *)dev, buffer, MODBUS_RTU_REPLY_TIMEOUT_MS * 1000, max_length);
+}
+
+static int rtu_write(void *dev, uint8_t *data, size_t length)
+{
+    return max485_send_data((Max485State *)dev, data, length);
+}
+
 int main()
 {
     stdio_init_all();
@@ -17,17 +27,27 @@ int main()
         return -1;
     }
 
-    multicore_launch_core1(core1_entry);
+    // multicore_launch_core1(core1_entry);
 
     // Example to turn on the Pico W LED
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
+    Max485State max485_state = {0};
+
     init_gpio_pins();
-    max485_init(UART_ID_MAX485, RE_DE_PIN);
-    max485_set_transmit_mode(RECEIVE);
-    // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
+
+
+    max485_init(&max485_state, UART_ID_MAX485, RE_DE_PIN);
+    max485_set_transmit_mode(&max485_state, RECEIVE);
+
     ModbusRtuContext ctx = {0};
-    modbus_init(&ctx);
+    ModbusRtuTransport transport = {
+        .write = rtu_write,
+        .read = rtu_read,
+        .dev = &max485_state
+    };
+    ctx.transport = transport;
+    modbus_rtu_init(&ctx);
 
     int modbus_res = 0;
     bool error_active = false;
@@ -35,7 +55,7 @@ int main()
     absolute_time_t next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
 
     while (true) {
-        int modbus_res = modbus_state_machine(&ctx);
+        int modbus_res = modbus_rtu_state_machine(&ctx);
 
         if (modbus_res == MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED) {
             error_active = true;

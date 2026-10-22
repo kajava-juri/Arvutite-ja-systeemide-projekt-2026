@@ -19,10 +19,17 @@ void set_motor_speed(uint32_t percent);
 void core1_entry() {
     motor_init();
 
+    uint32_t target_speed = 50;
+    
+    set_motor_speed(100);
+
+    sleep_ms(5000);
+
     while (1) {
-        uint32_t target_speed = multicore_fifo_pop_blocking();
 
         set_motor_speed(target_speed);
+
+        sleep_ms(10000);
     }
 }
 

@@ -39,6 +39,7 @@ add_executable(pico_w_2_firmware
         main.c
         drivers/max485.c
         modbus/modbus_rtu.c
+        modbus/modbus.c
         core1_main.c
 )
 

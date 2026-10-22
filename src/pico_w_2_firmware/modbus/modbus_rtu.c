@@ -5,11 +5,11 @@
 
 const StateHandle state_handlers[MODBUS_RTU_MAX_STATES] = {
     {NULL, NULL}, // stub for index 0
-    {modbus_action_entry_processing_error, modbus_action_processing_error}, // MODBUS_RTU_PROCESSING_ERROR
-    {modbus_action_entry_idle, modbus_action_idle}, // MODBUS_RTU_IDLE
-    {modbus_action_entry_waiting_for_reply, modbus_action_waiting_for_reply}, // MODBUS_RTU_WAITING_FOR_REPLY
-    {modbus_action_entry_processing_reply, modbus_action_processing_reply}, // MODBUS_RTU_PROCESSING_REPLY
-    {NULL, modbus_action_turnaround_delay}, // MODBUS_RTU_WAITING_TURNAROUND_DELAY
+    {modbus_rtu_action_entry_processing_error, modbus_rtu_action_processing_error}, // MODBUS_RTU_PROCESSING_ERROR
+    {modbus_rtu_action_entry_idle, modbus_rtu_action_idle}, // MODBUS_RTU_IDLE
+    {modbus_rtu_action_entry_waiting_for_reply, modbus_rtu_action_waiting_for_reply}, // MODBUS_RTU_WAITING_FOR_REPLY
+    {modbus_rtu_action_entry_processing_reply, modbus_rtu_action_processing_reply}, // MODBUS_RTU_PROCESSING_REPLY
+    {NULL, modbus_rtu_action_turnaround_delay}, // MODBUS_RTU_WAITING_TURNAROUND_DELAY
 };
 
 // for why the CRC table values are the way they are, refer to modbus specification
@@ -109,37 +109,37 @@ uint16_t compute_crc_fast(uint8_t *message, size_t message_length)
     return (uchCRCHi << 8 | uchCRCLo);
 }
 
-void modbus_init(ModbusRtuContext *ctx)
+void modbus_rtu_init(ModbusRtuContext *ctx)
 {
     set_state(ctx, MODBUS_RTU_IDLE);
     ctx->pending_error = MODBUS_RTU_ERROR_NONE;
     ctx->retry_count = 0;
 }
 
-void modbus_action_entry_idle(ModbusRtuContext *ctx)
+void modbus_rtu_action_entry_idle(ModbusRtuContext *ctx)
 {
     uart_puts(UART_ID, "Modbus RTU Idle state\n");
 }
 
-void modbus_action_idle(ModbusRtuContext *ctx)
+void modbus_rtu_action_idle(ModbusRtuContext *ctx)
 {
     uint32_t current_time = to_ms_since_boot(get_absolute_time());
     if(current_time - ctx->last_request_time < POLLING_INTERVAL_MS) {
         return; // not enough time has passed since last request
     }
 
-    modbus_read_from_holding_registers(ctx, 0x0000, 1);
+    modbus_rtu_read_from_holding_registers(ctx, 0x0004, 1);
 
     set_state(ctx, MODBUS_RTU_WAITING_FOR_REPLY);
 }
 
-void modbus_action_entry_waiting_for_reply(ModbusRtuContext *ctx)
+void modbus_rtu_action_entry_waiting_for_reply(ModbusRtuContext *ctx)
 {
     uart_puts(UART_ID, "Waiting for reply state\n");
     uart_puts(UART_ID, "Waiting for reply from slave\n");
 }
 
-void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
+void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)
 {
     uint32_t current_time = to_ms_since_boot(get_absolute_time());
     if (current_time - ctx->last_request_time > MODBUS_RTU_REPLY_TIMEOUT_MS) {
@@ -151,7 +151,8 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
 
     int res;
     // read function code
-    res = max485_receive_data((uint8_t *)&ctx->reply.data, (MODBUS_RTU_FRAME_START_END_DELAY_MS * 10) * 1000, sizeof(ctx->reply.data));
+    res = max485_receive_data(ctx->transport.dev, (uint8_t *)&ctx->reply.data, (MODBUS_RTU_FRAME_START_END_DELAY_MS) * 1000, sizeof(ctx->reply.data));
+    // res = ctx->transport.read(ctx->transport.dev, (uint8_t *)&ctx->reply.data, sizeof(ctx->reply.data));
 
     if (res == 0) {
         ctx->retry_count++;
@@ -164,12 +165,14 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
     }
     if (res < 0) {
         uart_puts(UART_ID, "Timeout or error receiving function code\n");
+        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_FUNCTION_CODE;
         set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
         return;
     }
     ctx->reply.data_length = res;
     if (ctx->reply.data_length < 2) {
         uart_puts(UART_ID, "Received data length is too short\n");
+        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_DATA_LENGTH;
         set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
         return;
     }
@@ -177,12 +180,15 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
     ctx->reply.function_code = ctx->reply.data[1];
     if (ctx->reply.function_code == ctx->request.function_code + 0x80) {
         uart_puts(UART_ID, "Error response from slave\n");
+        ctx->pending_error = MODBUS_RTU_ERROR_SLAVE_EXCEPTION;
+        ctx->reply.exception_code = ctx->reply.data[2];
         set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
         return;
     }
 
     if (ctx->reply.function_code != ctx->request.function_code) {
         uart_puts(UART_ID, "Invalid function code in reply\n");
+        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_FUNCTION_CODE;
         ctx->reply.exception_code = ctx->reply.data[2];
         set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
         return;
@@ -190,6 +196,7 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
 
     if (ctx->reply.data_length < 3) {
         uart_puts(UART_ID, "Received data length is too short\n");
+        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_DATA_LENGTH;
         set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
         return;
     }
@@ -200,6 +207,7 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
 
     if (received_crc != computed_crc) {
         uart_puts(UART_ID, "Invalid CRC in reply\n");
+        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_CRC;
         set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
         return;
     }
@@ -210,12 +218,12 @@ void modbus_action_waiting_for_reply(ModbusRtuContext *ctx)
     set_state(ctx, MODBUS_RTU_PROCESSING_REPLY);
 }
 
-void modbus_action_entry_processing_reply(ModbusRtuContext *ctx)
+void modbus_rtu_action_entry_processing_reply(ModbusRtuContext *ctx)
 {
     uart_puts(UART_ID, "Processing reply state\n");
 }
 
-void modbus_action_processing_reply(ModbusRtuContext *ctx)
+void modbus_rtu_action_processing_reply(ModbusRtuContext *ctx)
 {
     char formatted_data[512];
     snprintf(formatted_data, sizeof(formatted_data), "Reply from slave:\nSlave address: %d\nFunction code: %d\nData length: %d\nData: ", ctx->reply.slave_address, ctx->reply.function_code, ctx->reply.data_length);
@@ -226,6 +234,9 @@ void modbus_action_processing_reply(ModbusRtuContext *ctx)
     }
     strncat(formatted_data, "\n", sizeof(formatted_data) - strlen(formatted_data) - 1);
     uart_puts(UART_ID, formatted_data);
+    int16_t value = (ctx->reply.data[0] << 8) | ctx->reply.data[1];
+    snprintf(formatted_data, sizeof(formatted_data), "Value read from register: %d\n", value);
+    uart_puts(UART_ID, formatted_data);
 
     ctx->pending_error = MODBUS_RTU_ERROR_NONE;
     ctx->retry_count = 0;
@@ -233,12 +244,12 @@ void modbus_action_processing_reply(ModbusRtuContext *ctx)
     set_state(ctx, MODBUS_RTU_IDLE);
 }
 
-void modbus_action_entry_processing_error(ModbusRtuContext *ctx)
+void modbus_rtu_action_entry_processing_error(ModbusRtuContext *ctx)
 {
     uart_puts(UART_ID, "Processing error state\n");
 }
 
-void modbus_action_processing_error(ModbusRtuContext *ctx)
+void modbus_rtu_action_processing_error(ModbusRtuContext *ctx)
 {
     uint8_t error_code = ctx->request.function_code;
     uint8_t exception_code = ctx->reply.exception_code;
@@ -247,18 +258,18 @@ void modbus_action_processing_error(ModbusRtuContext *ctx)
     set_state(ctx, MODBUS_RTU_IDLE);
 }
 
-void modbus_action_turnaround_delay(ModbusRtuContext *ctx)
+void modbus_rtu_action_turnaround_delay(ModbusRtuContext *ctx)
 {
     uart_puts(UART_ID, "Waiting for turnaround delay\n");
 }
 
-int modbus_set_slave_address(ModbusRtuContext *ctx, uint8_t slave_address)
+int modbus_rtu_set_slave_address(ModbusRtuContext *ctx, uint8_t slave_address)
 {
     ctx->request.slave_address = slave_address;
     return 0;
 }
 
-int modbus_build_request(ModbusRtuContext *ctx, uint8_t function_code, const char *data, int data_length)
+int modbus_rtu_build_request(ModbusRtuContext *ctx, uint8_t function_code, const char *data, int data_length)
 {
     ctx->request.function_code = function_code;
     if (data_length > 252) {
@@ -271,7 +282,7 @@ int modbus_build_request(ModbusRtuContext *ctx, uint8_t function_code, const cha
     return 0;
 }
 
-void modbus_frame_serialize(ModbusRtuFrame *frame)
+void modbus_rtu_frame_serialize(ModbusRtuFrame *frame)
 {
     uint16_t crc_value = compute_crc_fast((uint8_t *)frame, 2 + frame->data_length);
     frame->data[frame->data_length]     = crc_value & 0xFF;   // low byte first
@@ -295,19 +306,20 @@ void enter_state(ModbusRtuContext *ctx, ModbusRtuState state)
     }
 }
 
-int modbus_send_request(ModbusRtuContext *ctx)
+int modbus_rtu_send_request(ModbusRtuContext *ctx)
 {
-    modbus_frame_serialize(&ctx->request);
+    modbus_rtu_frame_serialize(&ctx->request);
     sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS);
     // later call ensure_rtu_frame_start_end_delay()
 
-    int res = max485_send_data((uint8_t *)&ctx->request, 2 + ctx->request.data_length + 2); // slave address + function code + data + CRC
+    // int res = ctx->transport.write(ctx->transport.dev, (uint8_t *)&ctx->request, 2 + ctx->request.data_length + 2); // slave address + function code + data + CRC
+    int res = max485_send_data(ctx->transport.dev, (uint8_t *)&ctx->request, 2 + ctx->request.data_length + 2); // slave address + function code + data + CRC
     ctx->last_request_time = to_ms_since_boot(get_absolute_time());
 
     return res;
 }
 
-int modbus_state_machine(ModbusRtuContext *ctx)
+int modbus_rtu_state_machine(ModbusRtuContext *ctx)
 {
     enter_state(ctx, ctx->state);
 
@@ -318,14 +330,14 @@ int modbus_state_machine(ModbusRtuContext *ctx)
     return ctx->pending_error;
 }
 
-void modbus_read_from_holding_registers(ModbusRtuContext *ctx, uint16_t register_address, uint16_t register_count)
+void modbus_rtu_read_from_holding_registers(ModbusRtuContext *ctx, uint16_t register_address, uint16_t register_count)
 {
     char data[4];
     data[0] = (register_address >> 8) & 0xFF;
     data[1] = register_address & 0xFF;
     data[2] = (register_count >> 8) & 0xFF;
     data[3] = register_count & 0xFF;
-    modbus_set_slave_address(ctx, (uint8_t)41);
-    modbus_build_request(ctx, MODBUS_FC_READ_HOLDING_REGISTERS, data, 4);
-    modbus_send_request(ctx);
+    modbus_rtu_set_slave_address(ctx, (uint8_t)41);
+    modbus_rtu_build_request(ctx, MODBUS_FC_READ_HOLDING_REGISTERS, data, 4);
+    modbus_rtu_send_request(ctx);
 }
