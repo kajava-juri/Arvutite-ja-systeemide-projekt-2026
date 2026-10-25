@@ -156,7 +156,6 @@ void modbus_rtu_action_idle(ModbusRtuContext *ctx)
 void modbus_rtu_action_entry_waiting_for_reply(ModbusRtuContext *ctx)
 {
     uart_puts(UART_ID, "Waiting for reply state\n");
-    uart_puts(UART_ID, "Waiting for reply from slave\n");
 }
 
 void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)

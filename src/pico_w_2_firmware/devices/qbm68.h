@@ -19,5 +19,6 @@ typedef struct {
 } Qbm68;
 
 void qbm68_task(Qbm68 *dev);
+float get_pressure_data(Qbm68 *dev);
 
 #endif // QBM68_H

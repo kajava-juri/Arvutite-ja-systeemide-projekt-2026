@@ -37,9 +37,9 @@ static ModbusStatus parse_read_registers(ModbusContext *ctx, const uint8_t *pdu,
 {
     uint8_t byte_count = pdu[1];
 
-    char debug_msg[128];
-    snprintf(debug_msg, sizeof(debug_msg), "Parsing read registers: byte_count=%u, len=%zu, expected_count=%u\n", byte_count, len, 2 * ctx->expected_count);
-    uart_puts(UART_ID, debug_msg);
+    // char debug_msg[128];
+    // snprintf(debug_msg, sizeof(debug_msg), "Parsing read registers: byte_count=%u, len=%zu, expected_count=%u\n", byte_count, len, 2 * ctx->expected_count);
+    // uart_puts(UART_ID, debug_msg);
     
     if (byte_count != 2 * ctx->expected_count) return MB_ERROR;
 

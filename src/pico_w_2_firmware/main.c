@@ -1,6 +1,5 @@
 #include "main.h"
 
-#include "common.h"
 #include "drivers/max485.h"
 #include <stdio.h>
 #include "modbus/modbus_rtu.h"
@@ -8,6 +7,7 @@
 #include <pico/multicore.h>
 #include "pico/util/queue.h"
 #include "devices/qbm68.h"
+#include "pico/util/queue.h"
 
 static int rtu_read(void *dev, uint8_t *buffer, size_t max_length)
 {
@@ -17,6 +17,15 @@ static int rtu_read(void *dev, uint8_t *buffer, size_t max_length)
 static int rtu_write(void *dev, uint8_t *data, size_t length)
 {
     return max485_send_data((Max485State *)dev, data, length);
+}
+
+extern queue_t sensor_data_q;
+
+static void publish_sensor_data(SensorData *sensor_data)
+{
+    SensorData discard = {0};
+    queue_try_remove(&sensor_data_q, &discard);
+    queue_try_add(&sensor_data_q, sensor_data);
 }
 
 int main()
@@ -29,7 +38,7 @@ int main()
         return -1;
     }
 
-    // multicore_launch_core1(core1_entry);
+    queue_init(&sensor_data_q, sizeof(SensorData), 1);
 
     // Example to turn on the Pico W LED
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
@@ -74,9 +83,23 @@ int main()
         .last_status = MB_STATUS_OK
     };
 
+    multicore_launch_core1(core1_entry);
+
+    uint32_t last_pressure_update_ms = 0;
     while (true) {
         ModbusStatus modbus_res = modbus_task(&mb);
         qbm68_task(&qbm68_device);
+
+        if (last_pressure_update_ms != qbm68_device.updated_ms) {
+            last_pressure_update_ms = qbm68_device.updated_ms;
+            if(get_pressure_data(&qbm68_device) >= 0.0f) {
+                SensorData sensor_data = {
+                    .data = get_pressure_data(&qbm68_device),
+                    .updated_ms = qbm68_device.updated_ms
+                };
+                publish_sensor_data(&sensor_data);
+            }
+        }
 
         if (modbus_res == MB_RETRIES_EXCEEDED || modbus_res == MB_TIMEOUT || modbus_res == MB_TRANSPORT_ERROR) {
             error_active = true;

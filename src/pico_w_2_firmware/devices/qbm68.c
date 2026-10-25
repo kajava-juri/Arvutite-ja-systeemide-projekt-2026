@@ -29,3 +29,11 @@ void qbm68_task(Qbm68 *dev)
         dev->last_request_ms = now;
     }
 }
+
+float get_pressure_data(Qbm68 *dev)
+{
+    if (dev->last_status != MB_STATUS_OK) {
+        return -1.0f;
+    }
+    return dev->pressure;
+}

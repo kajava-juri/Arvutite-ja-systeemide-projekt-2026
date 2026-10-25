@@ -3,6 +3,7 @@
 #include <pico/multicore.h>
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
+#include "pico/util/queue.h"
 
 // Pin definitions
 #define ENA_PIN 2   // PWM speed control
@@ -16,20 +17,30 @@
 void motor_init(void);
 void set_motor_speed(uint32_t percent);
 
+queue_t sensor_data_q;
+
 void core1_entry() {
     motor_init();
 
+    SensorData last_sensor_data = {0};
+
     uint32_t target_speed = 50;
     
-    set_motor_speed(100);
+    // set_motor_speed(100);
 
-    sleep_ms(5000);
-
+    // sleep_ms(5000);
+    char buffer[100];
+    bool fresh = false;
     while (1) {
+        fresh = queue_try_remove(&sensor_data_q, &last_sensor_data);
+        if(fresh) {
+            snprintf(buffer, sizeof(buffer), "Core 1: Received sensor data: %.2f at %u ms\n", last_sensor_data.data, last_sensor_data.updated_ms);
+            uart_puts(UART_ID, buffer);
+        }
 
-        set_motor_speed(target_speed);
+        // set_motor_speed(target_speed);
 
-        sleep_ms(10000);
+        sleep_ms(1000);
     }
 }
 
