@@ -170,7 +170,6 @@ void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)
     }
 
     int res;
-    // read function code
     res = ctx->transport.read(ctx->transport.dev, (uint8_t *)&ctx->reply.data, sizeof(ctx->reply.data));
 
     if (res == 0) {
@@ -184,10 +183,11 @@ void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)
     }
     if (res < 0) {
         uart_puts(UART_ID, "Timeout or error receiving function code\n");
-        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_FUNCTION_CODE;
+        ctx->pending_error = MODBUS_RTU_TRANSPORT_ERROR;
         set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
         return;
     }
+
     ctx->reply.data_length = res;
     if (ctx->reply.data_length < 2) {
         uart_puts(UART_ID, "Received data length is too short\n");
@@ -195,44 +195,6 @@ void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)
         set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
         return;
     }
-    ctx->reply.slave_address = ctx->reply.data[0];
-    ctx->reply.function_code = ctx->reply.data[1];
-    if (ctx->reply.function_code == ctx->request.function_code + 0x80) {
-        uart_puts(UART_ID, "Error response from slave\n");
-        ctx->pending_error = MODBUS_RTU_ERROR_SLAVE_EXCEPTION;
-        ctx->reply.exception_code = ctx->reply.data[2];
-        set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
-        return;
-    }
-
-    if (ctx->reply.function_code != ctx->request.function_code) {
-        uart_puts(UART_ID, "Invalid function code in reply\n");
-        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_FUNCTION_CODE;
-        ctx->reply.exception_code = ctx->reply.data[2];
-        set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
-        return;
-    }
-
-    if (ctx->reply.data_length < 3) {
-        uart_puts(UART_ID, "Received data length is too short\n");
-        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_DATA_LENGTH;
-        set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
-        return;
-    }
-    ctx->reply.data_length = ctx->reply.data[2];
-
-    uint16_t received_crc = (uint8_t)ctx->reply.data[3 + ctx->reply.data_length] | ((uint8_t)ctx->reply.data[4 + ctx->reply.data_length] << 8);
-    uint16_t computed_crc = compute_crc_fast((uint8_t *)&ctx->reply.data, 3 + ctx->reply.data_length);
-
-    if (received_crc != computed_crc) {
-        uart_puts(UART_ID, "Invalid CRC in reply\n");
-        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_CRC;
-        set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
-        return;
-    }
-
-    // update data pointer to point to the actual data, skipping slave address and function code
-    memmove(ctx->reply.data, ctx->reply.data + 3, ctx->reply.data_length);
 
     set_state(ctx, MODBUS_RTU_PROCESSING_REPLY);
 }
@@ -244,18 +206,24 @@ void modbus_rtu_action_entry_processing_reply(ModbusRtuContext *ctx)
 
 void modbus_rtu_action_processing_reply(ModbusRtuContext *ctx)
 {
-    char formatted_data[512];
-    snprintf(formatted_data, sizeof(formatted_data), "Reply from slave:\nSlave address: %d\nFunction code: %d\nData length: %d\nData: ", ctx->reply.slave_address, ctx->reply.function_code, ctx->reply.data_length);
-    for (int i = 0; i < ctx->reply.data_length; i++) {
-        char byte_str[4];
-        snprintf(byte_str, sizeof(byte_str), "%02X ", (unsigned char)ctx->reply.data[i]);
-        strncat(formatted_data, byte_str, sizeof(formatted_data) - strlen(formatted_data) - 1);
+
+    int data_length = ctx->reply.data_length;
+    ctx->reply.slave_address = ctx->reply.data[0];
+
+    uint16_t received_crc = (uint8_t)ctx->reply.data[data_length - 2] | ((uint8_t)ctx->reply.data[data_length - 1] << 8);
+    uint16_t computed_crc = compute_crc_fast((uint8_t *)&ctx->reply.data, data_length - 2);
+
+    if (received_crc != computed_crc) {
+        uart_puts(UART_ID, "Invalid CRC in reply\n");
+        ctx->pending_error = MODBUS_RTU_ERROR_INVALID_CRC;
+        set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
+        return;
     }
-    strncat(formatted_data, "\n", sizeof(formatted_data) - strlen(formatted_data) - 1);
-    // uart_puts(UART_ID, formatted_data);
-    int16_t value = (ctx->reply.data[0] << 8) | ctx->reply.data[1];
-    snprintf(formatted_data, sizeof(formatted_data), "Value read from register: %d\n", value);
-    // uart_puts(UART_ID, formatted_data);
+
+    // update data pointer to point to the actual data, skipping slave address and function code
+    memmove(ctx->reply.data, ctx->reply.data + 1, ctx->reply.data_length - 2); // leave only PDU in data for the higher level processing
+    // update data length to reflect the actual data length
+    ctx->reply.data_length -= 2;
 
     ctx->pending_error = MODBUS_RTU_ERROR_NONE;
     ctx->retry_count = 0;
@@ -271,7 +239,6 @@ void modbus_rtu_action_entry_processing_error(ModbusRtuContext *ctx)
 void modbus_rtu_action_processing_error(ModbusRtuContext *ctx)
 {
     uint8_t error_code = ctx->request.function_code;
-    uint8_t exception_code = ctx->reply.exception_code;
 
     // for debuggin go back to idle state and print error
     finish(ctx, ctx->pending_error);

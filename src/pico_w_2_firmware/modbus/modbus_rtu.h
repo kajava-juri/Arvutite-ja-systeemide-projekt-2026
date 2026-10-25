@@ -15,12 +15,11 @@ typedef enum
 
 typedef enum {
     MODBUS_RTU_ERROR_NONE = 0,
-    MODBUS_RTU_ERROR_TIMEOUT = -1,
-    MODBUS_RTU_ERROR_INVALID_FUNCTION_CODE = -2,
-    MODBUS_RTU_ERROR_INVALID_DATA_LENGTH = -3,
-    MODBUS_RTU_ERROR_INVALID_CRC = -4,
-    MODBUS_RTU_ERROR_SLAVE_EXCEPTION = -5,
-    MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED = -6,
+    MODBUS_RTU_ERROR_TIMEOUT = -99,
+    MODBUS_RTU_ERROR_INVALID_DATA_LENGTH,
+    MODBUS_RTU_ERROR_INVALID_CRC,
+    MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED,
+    MODBUS_RTU_TRANSPORT_ERROR,
 } ModbusRtuError;
 
 // start and end is defined as 3.5 character times
@@ -44,7 +43,6 @@ typedef struct
     uint8_t function_code;
     char data[252 + 2]; // 252 bytes of data + 2 bytes for CRC
     uint8_t data_length;
-    uint8_t exception_code;
 } ModbusRtuFrame;
 
 typedef struct
