@@ -1,0 +1,24 @@
+[build-system]
+requires = ["flit_core >= 3.12.0, <5"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "rtu_server"
+version = "0.0.1"
+authors = [
+  { name="Jüri Kajava", email="jukaja@taltech.ee" },
+]
+description = "Modbus slave for storing sensor data and displaying it via CLI"
+# readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+# license = "MIT"
+# license-files = ["LICEN[CS]E*"]
+
+dependencies = [
+    "modbus-tk == 1.1.5",
+    "pyserial"
+]
