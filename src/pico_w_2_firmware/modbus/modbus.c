@@ -47,6 +47,7 @@ static ModbusStatus parse_read_registers(ModbusContext *ctx, const uint8_t *pdu,
         ctx->regs[i] = ((uint16_t)pdu[2 + 2*i] << 8) | pdu[3 + 2*i];
         // ctx->regs[i] = ((uint16_t)(uint8_t)pdu[2*i] << 8) | (uint8_t)pdu[2*i + 1];
     }
+
     res->regs = ctx->regs;
     res->reg_count = ctx->expected_count;
     return MB_STATUS_OK;
