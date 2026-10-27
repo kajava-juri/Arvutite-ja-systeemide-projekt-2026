@@ -32,6 +32,8 @@ typedef struct {
 
 ModbusStatus modbus_read_from_holding_registers(ModbusContext *context, uint16_t register_address, uint16_t register_count, uint8_t slave_address,
     ModbusCallback callback, void *user_data);
+ModbusStatus modbus_write_single_register(ModbusContext *ctx, uint16_t register_address, uint16_t value, uint8_t slave_address,
+    ModbusCallback callback, void *user_data);
 
 ModbusStatus modbus_task(ModbusContext *context);
 

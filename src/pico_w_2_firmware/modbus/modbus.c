@@ -53,6 +53,20 @@ static ModbusStatus parse_read_registers(ModbusContext *ctx, const uint8_t *pdu,
     return MB_STATUS_OK;
 }
 
+static ModbusStatus parse_write_single_register(ModbusContext *ctx, const uint8_t *pdu, size_t len, ModbusResult *res)
+{
+    if (len < 5) return MB_ERROR;
+
+    uint16_t register_address = ((uint16_t)pdu[1] << 8) | pdu[2];
+    uint16_t register_value = ((uint16_t)pdu[3] << 8) | pdu[4];
+
+    res->regs = ctx->regs;
+    res->reg_count = 1;
+    ctx->regs[0] = register_value; // store the written value in the context's regs array
+
+    return MB_STATUS_OK;
+}
+
 static ModbusStatus parse_reply(ModbusContext *ctx, uint8_t *pdu, size_t len, ModbusResult *res)
 {
     if (len < 2) return MB_ERROR;
@@ -70,6 +84,8 @@ static ModbusStatus parse_reply(ModbusContext *ctx, uint8_t *pdu, size_t len, Mo
         case MODBUS_FC_READ_HOLDING_REGISTERS:
         case MODBUS_FC_READ_INPUT_REGISTERS:
             return parse_read_registers(ctx, pdu, len, res);
+        case MODBUS_FC_WRITE_SINGLE_REGISTER:
+            return parse_write_single_register(ctx, pdu, len, res);
         default:
             return MB_UNSUPPORTED_FUNCTION;
     }
@@ -96,6 +112,33 @@ ModbusStatus modbus_read_from_holding_registers(ModbusContext *ctx, uint16_t reg
         return MB_TRANSPORT_ERROR;
     }
     
+    ctx->callback = callback;
+    ctx->user_data = user_data;
+
+    return MB_STATUS_OK;
+}
+
+ModbusStatus modbus_write_single_register(ModbusContext *ctx, uint16_t register_address, uint16_t value, uint8_t slave_address,
+    ModbusCallback callback, void *user_data)
+{
+    // only able to send in IDLE state
+    if (ctx->rtu.state != MODBUS_RTU_IDLE) {
+        return MB_BUSY;
+    }
+
+    char data[4];
+    data[0] = (register_address >> 8) & 0xFF;
+    data[1] = register_address & 0xFF;
+    data[2] = (value >> 8) & 0xFF;
+    data[3] = value & 0xFF;
+    ctx->expected_count = 1; // expecting one register in the reply
+    modbus_rtu_set_slave_address(&ctx->rtu, slave_address);
+    modbus_rtu_build_request(&ctx->rtu, MODBUS_FC_WRITE_SINGLE_REGISTER, data, 4);
+    if(modbus_rtu_send_request(&ctx->rtu) < 0) {
+        // this function forwards the return of the transport.write
+        return MB_TRANSPORT_ERROR;
+    }
+
     ctx->callback = callback;
     ctx->user_data = user_data;
 
