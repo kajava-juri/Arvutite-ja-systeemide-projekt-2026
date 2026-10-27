@@ -12,6 +12,14 @@ static void on_pressure(ModbusResult *res, void *user)
     dev->pressure     = dev->pressure_raw;
     dev->updated_ms   = to_ms_since_boot(get_absolute_time());
 
+    if(dev->interface_slave != NULL) {
+        PublishData data = {
+            .reg_address = QBM68_REG_PRESSURE,
+            .reg_value   = (uint16_t)dev->pressure_raw
+        };
+        queue_try_add(&dev->interface_slave->publish_q, &data);
+    }
+
     uart_puts(UART_ID, "Pressure read successfully\n");
     char formatted_data[512];
     snprintf(formatted_data, sizeof(formatted_data), "On pressure callback: Pressure raw: %d, Pressure: %.2f, Updated ms: %u\n", dev->pressure_raw, dev->pressure, dev->updated_ms);

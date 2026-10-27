@@ -2,6 +2,7 @@
 #define QBM68_H
 
 #include "modbus/modbus.h"
+#include "modbus_interface.h"
 
 #define QBM68_REG_PRESSURE    4   // from datasheet
 #define QBM68_POLL_MS         1000
@@ -16,6 +17,9 @@ typedef struct {
     float          pressure;
     uint32_t       updated_ms;
     ModbusStatus   last_status;
+
+    // optional interface slave for publishing data
+    InterfaceSlave *interface_slave;
 } Qbm68;
 
 void qbm68_task(Qbm68 *dev);

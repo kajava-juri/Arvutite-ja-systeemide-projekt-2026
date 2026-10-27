@@ -8,6 +8,7 @@
 #include "pico/util/queue.h"
 #include "devices/qbm68.h"
 #include "pico/util/queue.h"
+#include "devices/modbus_interface.h"
 
 static int rtu_read(void *dev, uint8_t *buffer, size_t max_length)
 {
@@ -71,6 +72,18 @@ int main()
     bool error_active = false;
     bool led_on = true;
     absolute_time_t next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
+
+    queue_t qbm68_publish_q;
+    queue_init(&qbm68_publish_q, sizeof(PublishData), 1);
+    InterfaceSlave interface_slave = {
+        .mb = &mb,
+        .slave = 10,
+        .pending = false,
+        .last_request_ms = 0,
+        .publish_q = qbm68_publish_q,
+        .queue_size = 1,
+        .last_status = MB_STATUS_OK
+    };
 
     Qbm68 qbm68_device = {
         .mb = &mb,
