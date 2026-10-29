@@ -5,6 +5,7 @@ import modbus_tk.defines as cst
 from modbus_tk import modbus_rtu
 import serial
 from .registers import REGISTER_MAP
+import time
 
 class ModbusRtuUIServer:
     def __init__(self, port, slave_id, block, start_addr, num_regs, baudrate=9600, parity=serial.PARITY_NONE, stopbits=2):
@@ -32,7 +33,10 @@ class ModbusRtuUIServer:
 
             while True:
                 raw = slave.get_values(self.block, self.start_addr, self.num_regs)
-                sys.stdout.write('done: values read: %s\r\n' % (str(raw)))
+                # sys.stdout.write('done: values read: %s\r\n' % (str(raw)))
+                decoded = self.decode(raw)
+                sys.stdout.write('done: values read: %s\r\n' % (str(decoded)))
+                time.sleep(1)
 
         except Exception as e:
             self.logger.error(e)

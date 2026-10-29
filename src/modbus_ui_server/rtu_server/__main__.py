@@ -12,12 +12,9 @@
 # for simulating and testing: replace <user> with your username that has permission to access the port
 # udo socat -d -d PTY,rawer,link=/dev/ttyS10,user=<user> PTY,rawer,link=/dev/ttyS11
 
-import sys
-
-import modbus_tk
-import modbus_tk.defines as cst
-from modbus_tk import modbus_rtu
+from rtu_server.server import ModbusRtuUIServer
 import serial
+
 
 
 PORT = '/dev/ttyS10' # 'COMXXX' on Windows
@@ -32,5 +29,14 @@ START_ADDR = 0
 NUM_REGS = 20
 
 if __name__ == "__main__":
-    rtu_server = modbus_rtu.RtuServer(serial.Serial(PORT, baudrate=BAUDRATE, parity=PARITY, bytesize=8, stopbits=STOPBITS))
+    rtu_server = ModbusRtuUIServer(
+        port=PORT,
+        slave_id=SLAVE_ID,
+        block=BLOCK,
+        start_addr=START_ADDR,
+        num_regs=NUM_REGS,
+        baudrate=BAUDRATE,
+        parity=PARITY,
+        stopbits=STOPBITS
+    )
     rtu_server.start()
