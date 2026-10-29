@@ -9,6 +9,7 @@
 #include "devices/qbm68.h"
 #include "pico/util/queue.h"
 #include "devices/modbus_interface.h"
+#include "drivers/rotary_encoder.h"
 
 static int rtu_read(void *dev, uint8_t *buffer, size_t max_length)
 {

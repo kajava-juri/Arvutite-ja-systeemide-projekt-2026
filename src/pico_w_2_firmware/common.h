@@ -23,4 +23,12 @@
 
 #define RE_DE_PIN 18
 
+#define CLK_PIN  2
+#define DT_PIN   3
+#define SW_PIN   4
+#define DEBOUNCE_US 100
+
+#define MOTOR_MIN_PWM 60
+#define MOTOR_MAX_PWM 100
+
 #endif // COMMON_H

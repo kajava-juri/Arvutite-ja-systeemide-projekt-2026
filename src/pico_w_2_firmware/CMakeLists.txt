@@ -44,6 +44,7 @@ add_executable(pico_w_2_firmware
         devices/qbm68.c
         pid_control.c
         devices/modbus_interface.c
+        drivers/rotary_encoder.c
 )
 
 pico_set_program_name(pico_w_2_firmware "pico_w_2_firmware")
