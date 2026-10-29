@@ -3,6 +3,8 @@ import sys
 import modbus_tk
 import modbus_tk.defines as cst
 from modbus_tk import modbus_rtu
+from modbus_tk.hooks import install_hook
+from modbus_tk.modbus import ModbusBlock
 import serial
 from .registers import REGISTER_MAP
 import time
@@ -18,8 +20,16 @@ class ModbusRtuUIServer:
         self.start_addr = start_addr
         self.num_regs = num_regs
 
+        install_hook("modbus.ModbusBlock.setitem", lambda fct: self.handle_set_item(fct))
+
         self.logger = modbus_tk.utils.create_logger(name="console", record_format="%(message)s")
         self.server = modbus_rtu.RtuServer(serial.Serial(self.port, baudrate=self.baudrate, parity=self.parity, bytesize=8, stopbits=self.stopbits))
+
+    def handle_set_item(self, fct: tuple[ModbusBlock, any, any]) -> None:
+        (block, slice, value) = fct
+        """Hook to handle after receiving a response from the Modbus master."""
+        self.logger.info(f"Received slice: {slice}, value: {value}")
+        self.logger.info(f"Block: {block.starting_address}, Size: {block.size}")
 
     def start(self):
         try:
@@ -32,10 +42,10 @@ class ModbusRtuUIServer:
             slave.add_block(self.block, cst.HOLDING_REGISTERS, self.start_addr, self.num_regs)
 
             while True:
-                raw = slave.get_values(self.block, self.start_addr, self.num_regs)
+                # raw = slave.get_values(self.block, self.start_addr, self.num_regs)
                 # sys.stdout.write('done: values read: %s\r\n' % (str(raw)))
-                decoded = self.decode(raw)
-                sys.stdout.write('done: values read: %s\r\n' % (str(decoded)))
+                # decoded = self.decode(raw)
+                # sys.stdout.write('done: values read: %s\r\n' % (str(decoded)))
                 time.sleep(1)
 
         except Exception as e:
