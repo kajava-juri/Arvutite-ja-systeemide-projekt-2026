@@ -5,6 +5,7 @@
 #include "hardware/pwm.h"
 #include "pico/util/queue.h"
 #include "pid_control.h"
+#include "devices/modbus_interface.h"
 
 // Pin definitions
 #define ENA_PIN 6   // PWM speed control
@@ -15,7 +16,7 @@
 #define PWM_WRAP 5999
 
 static int previous_value = 1;
-static int rotary_value = MOTOR_MAX_PWM; // Start at max speed
+static uint16_t rotary_value = MOTOR_MAX_PWM; // Start at max speed
 
 // Function prototypes
 void motor_init(void);
@@ -46,6 +47,11 @@ static void rotary_changed(void) {
 }
 
 queue_t sensor_data_q;
+queue_t core1_to_core0_q;
+
+static void publish_setpoint_to_core0(uint16_t setpoint) {
+    queue_try_add(&core1_to_core0_q, &setpoint);
+}
 
 void core1_entry() {
     motor_init();
@@ -53,7 +59,6 @@ void core1_entry() {
     SensorData last_sensor_data = {0};
 
     uint32_t target_speed = 50;
-    float setpoint = 50.0f; // Pa
     float preverror = 0.0;
     
     // set_motor_speed(100);
@@ -77,6 +82,8 @@ void core1_entry() {
                 snprintf(buffer, sizeof(buffer), "Core 1: Received sensor data: %.2f at %u ms\n", last_sensor_data.data, last_sensor_data.updated_ms);
                 uart_puts(UART_ID, buffer);
             }
+
+            publish_setpoint_to_core0((uint16_t)rotary_value);
             
             if (last_sensor_data.updated_ms == 0) {
                 // No valid sensor data yet, skip PID control

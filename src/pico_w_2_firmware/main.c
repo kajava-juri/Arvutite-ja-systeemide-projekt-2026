@@ -22,6 +22,7 @@ static int rtu_write(void *dev, uint8_t *data, size_t length)
 }
 
 extern queue_t sensor_data_q;
+extern queue_t core1_to_core0_q;
 
 static void publish_sensor_data(SensorData *sensor_data)
 {
@@ -76,6 +77,7 @@ int main()
 
     queue_t qbm68_publish_q;
     queue_init(&qbm68_publish_q, sizeof(PublishData), 1);
+    queue_init(&core1_to_core0_q, sizeof(uint16_t), 1);
     InterfaceSlave interface_slave = {
         .mb = &mb,
         .slave = 10,
@@ -97,12 +99,17 @@ int main()
         .last_status = MB_STATUS_OK
     };
 
+    uint16_t setpoint = 0; // Pa
+    bool fresh = false;
+    char buffer[100];
+
     multicore_launch_core1(core1_entry);
 
     uint32_t last_pressure_update_ms = 0;
     while (true) {
         ModbusStatus modbus_res = modbus_task(&mb);
         qbm68_task(&qbm68_device);
+        interface_slave_task(&interface_slave);
 
         if (last_pressure_update_ms != qbm68_device.updated_ms) {
             last_pressure_update_ms = qbm68_device.updated_ms;
@@ -127,6 +134,18 @@ int main()
             led_on = !led_on;
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
             next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
+        }
+
+        // setpoint data from core 1
+        fresh = queue_try_remove(&core1_to_core0_q, &setpoint);
+        if(fresh) {
+            PublishData data = {
+                .reg_address = 1,
+                .reg_value   = setpoint
+            };
+            // snprintf(buffer, sizeof(buffer), "Publishing setpoint to interface slave: %u\n", setpoint);
+            // uart_puts(UART_ID, buffer);
+            queue_try_add(&interface_slave.publish_q, &data);
         }
 
         sleep_ms(MODBUS_RTU_FRAME_START_END_DELAY_MS);

@@ -17,7 +17,7 @@ import serial
 
 
 
-PORT = '/dev/ttyS10' # 'COMXXX' on Windows
+PORT = '/dev/ttyUSB0' # 'COMXXX' on Windows
 # PORT = None
 BAUDRATE = 9600
 PARITY = serial.PARITY_NONE

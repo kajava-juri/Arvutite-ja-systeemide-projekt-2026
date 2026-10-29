@@ -23,9 +23,9 @@
 
 #define RE_DE_PIN 18
 
-#define CLK_PIN  2
-#define DT_PIN   3
-#define SW_PIN   4
+#define CLK_PIN  13
+#define DT_PIN   12
+#define SW_PIN   11
 #define DEBOUNCE_US 100
 
 #define MOTOR_MIN_PWM 60

@@ -4,7 +4,7 @@
 #include "modbus/modbus.h"
 #include "modbus_interface.h"
 
-#define QBM68_REG_PRESSURE    4   // from datasheet
+#define QBM68_REG_PRESSURE    0   // from datasheet
 #define QBM68_POLL_MS         1000
 
 typedef struct {
