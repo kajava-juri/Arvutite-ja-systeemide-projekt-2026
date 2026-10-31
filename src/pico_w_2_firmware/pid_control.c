@@ -23,18 +23,19 @@ float pid_controller(float setpoint, float measured, pid_ctrl_t *pid, float dt)
     pid->derivative = derivative;
 
     // compute total output
-    float total_output = proportional +  pid->integral + derivative;
+    float total_output = proportional +  pid->integral + pid->derivative;
 
     // source: https://iacsengineering.com/integral-windup/
     if (total_output > pid->output_max) {
         total_output = pid->output_max;
-        pid->integral = pid->integral - (pid->Ki * error * dt); // Reverse integration
+        pid->integral = pid->integral - integral; // Reverse integration
     } else if (total_output < pid->output_min) {
         total_output = pid->output_min;
-        pid->integral = pid->integral - (pid->Ki * error * dt); // Reverse integration
+        pid->integral = pid->integral - integral; // Reverse integration
     }
 
     pid->prev_error = error;
+    pid->output = total_output;
 
     //return
     return total_output;
@@ -51,4 +52,5 @@ void pid_init(pid_ctrl_t *pid, float Kp, float Ki, float Kd, float output_min, f
     pid->output = 0.0f;
     pid->output_min = output_min;
     pid->output_max = output_max;
+    pid->prev_error = 0.0f;
 }
