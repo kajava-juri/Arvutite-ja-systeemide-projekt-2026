@@ -7,7 +7,6 @@
 #include <pico/multicore.h>
 #include "pico/util/queue.h"
 #include "devices/qbm68.h"
-#include "pico/util/queue.h"
 #include "devices/modbus_interface.h"
 #include "drivers/rotary_encoder.h"
 
@@ -41,8 +40,13 @@ int main()
         return -1;
     }
 
+    queue_t qbm68_publish_q;
+    queue_t modbus_request_q;
+    queue_init(&qbm68_publish_q, sizeof(PublishData), 1);
+    queue_init(&core1_to_core0_q, sizeof(uint16_t), 1);
     queue_init(&sensor_data_q, sizeof(SensorData), 1);
-
+    queue_init(&modbus_request_q, sizeof(ModbusRequest), 3);
+    
     // Example to turn on the Pico W LED
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
@@ -67,7 +71,8 @@ int main()
         .rtu = ctx,
         .regs = {0},
         .callback = NULL,
-        .user_data = NULL
+        .user_data = NULL,
+        .request_queue = &modbus_request_q
     };
 
     int modbus_res = 0;
@@ -75,9 +80,6 @@ int main()
     bool led_on = true;
     absolute_time_t next_toggle = make_timeout_time_ms(ERROR_BLINK_MS);
 
-    queue_t qbm68_publish_q;
-    queue_init(&qbm68_publish_q, sizeof(PublishData), 1);
-    queue_init(&core1_to_core0_q, sizeof(uint16_t), 1);
     InterfaceSlave interface_slave = {
         .mb = &mb,
         .slave = 10,

@@ -17,6 +17,8 @@ void interface_slave_task(InterfaceSlave *dev)
 {
     bool fresh = queue_try_remove(&dev->publish_q, &last_publish_data);
     if(fresh) {
+        // FIX: check if the bus is busy before sending a new request
+        // this causes the request to lose the publish data
         if(modbus_write_single_register(dev->mb, last_publish_data.reg_address, last_publish_data.reg_value, dev->slave,
                                       on_write_register, dev) == MB_STATUS_OK) {
             dev->pending = true;

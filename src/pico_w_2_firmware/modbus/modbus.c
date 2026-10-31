@@ -91,58 +91,115 @@ static ModbusStatus parse_reply(ModbusContext *ctx, uint8_t *pdu, size_t len, Mo
     }
 }
 
-ModbusStatus modbus_read_from_holding_registers(ModbusContext *ctx, uint16_t register_address, uint16_t register_count, uint8_t slave_address,
-    ModbusCallback callback, void *user_data)
+static ModbusStatus start_request(ModbusContext *ctx, ModbusRequest *req)
 {
-    // only able to send in IDLE state
-    if (ctx->rtu.state != MODBUS_RTU_IDLE) {
-        return MB_BUSY;
-    }
-    
     char data[4];
-    data[0] = (register_address >> 8) & 0xFF;
-    data[1] = register_address & 0xFF;
-    data[2] = (register_count >> 8) & 0xFF;
-    data[3] = register_count & 0xFF;
-    ctx->expected_count = register_count;
-    modbus_rtu_set_slave_address(&ctx->rtu, slave_address);
-    modbus_rtu_build_request(&ctx->rtu, MODBUS_FC_READ_HOLDING_REGISTERS, data, 4);
+    data[0] = (req->register_address >> 8) & 0xFF;
+    data[1] = req->register_address & 0xFF;
+    if(req->function_code == MODBUS_FC_READ_HOLDING_REGISTERS
+    || req->function_code == MODBUS_FC_READ_INPUT_REGISTERS) {
+        data[2] = (req->read.count >> 8) & 0xFF;
+        data[3] = req->read.count & 0xFF;
+        ctx->expected_count = req->read.count;
+    } else if(req->function_code == MODBUS_FC_WRITE_SINGLE_REGISTER) {
+        data[2] = (req->write_single.value >> 8) & 0xFF;
+        data[3] = req->write_single.value & 0xFF;
+        ctx->expected_count = 1; // expecting one register in the reply
+    } else {
+        return MB_UNSUPPORTED_FUNCTION;
+    }
+
+    modbus_rtu_set_slave_address(&ctx->rtu, req->slave_address);
+    modbus_rtu_build_request(&ctx->rtu, req->function_code, data, 4);
     if(modbus_rtu_send_request(&ctx->rtu) < 0) {
         // this function forwards the return of the transport.write
         return MB_TRANSPORT_ERROR;
     }
     
-    ctx->callback = callback;
-    ctx->user_data = user_data;
+    ctx->callback = req->callback;
+    ctx->user_data = req->user_data;
 
     return MB_STATUS_OK;
+}
+
+ModbusStatus modbus_read_from_holding_registers(ModbusContext *ctx, uint16_t register_address, uint16_t register_count, uint8_t slave_address,
+    ModbusCallback callback, void *user_data)
+{
+    // TODO: remove commented code after verifying that the queue implementation works correctly
+    // // only able to send in IDLE state
+    // if (ctx->rtu.state != MODBUS_RTU_IDLE) {
+    //     return MB_BUSY;
+    // }
+    
+    // char data[4];
+    // data[0] = (register_address >> 8) & 0xFF;
+    // data[1] = register_address & 0xFF;
+    // data[2] = (register_count >> 8) & 0xFF;
+    // data[3] = register_count & 0xFF;
+    // ctx->expected_count = register_count;
+    // modbus_rtu_set_slave_address(&ctx->rtu, slave_address);
+    // modbus_rtu_build_request(&ctx->rtu, MODBUS_FC_READ_HOLDING_REGISTERS, data, 4);
+    // if(modbus_rtu_send_request(&ctx->rtu) < 0) {
+    //     // this function forwards the return of the transport.write
+    //     return MB_TRANSPORT_ERROR;
+    // }
+    
+    // ctx->callback = callback;
+    // ctx->user_data = user_data;
+
+    // return MB_STATUS_OK;
+
+    ModbusRequest req = {
+        .function_code = MODBUS_FC_READ_HOLDING_REGISTERS,
+        .register_address = register_address,
+        .slave_address = slave_address,
+        .read.count = register_count,
+        .callback = callback,
+        .user_data = user_data
+    };
+
+    // TODO: add new status for MB_QUEUE and handle it on the caller side
+    return queue_try_add(ctx->request_queue, &req) ? MB_STATUS_OK : MB_BUSY;
 }
 
 ModbusStatus modbus_write_single_register(ModbusContext *ctx, uint16_t register_address, uint16_t value, uint8_t slave_address,
     ModbusCallback callback, void *user_data)
 {
-    // only able to send in IDLE state
-    if (ctx->rtu.state != MODBUS_RTU_IDLE) {
-        return MB_BUSY;
-    }
+    // TODO: remove commented code after verifying that the queue implementation works correctly
+    // // only able to send in IDLE state
+    // if (ctx->rtu.state != MODBUS_RTU_IDLE) {
+    //     return MB_BUSY;
+    // }
 
-    char data[4];
-    data[0] = (register_address >> 8) & 0xFF;
-    data[1] = register_address & 0xFF;
-    data[2] = (value >> 8) & 0xFF;
-    data[3] = value & 0xFF;
-    ctx->expected_count = 1; // expecting one register in the reply
-    modbus_rtu_set_slave_address(&ctx->rtu, slave_address);
-    modbus_rtu_build_request(&ctx->rtu, MODBUS_FC_WRITE_SINGLE_REGISTER, data, 4);
-    if(modbus_rtu_send_request(&ctx->rtu) < 0) {
-        // this function forwards the return of the transport.write
-        return MB_TRANSPORT_ERROR;
-    }
+    // char data[4];
+    // data[0] = (register_address >> 8) & 0xFF;
+    // data[1] = register_address & 0xFF;
+    // data[2] = (value >> 8) & 0xFF;
+    // data[3] = value & 0xFF;
+    // ctx->expected_count = 1; // expecting one register in the reply
+    // modbus_rtu_set_slave_address(&ctx->rtu, slave_address);
+    // modbus_rtu_build_request(&ctx->rtu, MODBUS_FC_WRITE_SINGLE_REGISTER, data, 4);
+    // if(modbus_rtu_send_request(&ctx->rtu) < 0) {
+    //     // this function forwards the return of the transport.write
+    //     return MB_TRANSPORT_ERROR;
+    // }
 
-    ctx->callback = callback;
-    ctx->user_data = user_data;
+    // ctx->callback = callback;
+    // ctx->user_data = user_data;
 
-    return MB_STATUS_OK;
+    // return MB_STATUS_OK;
+
+    ModbusRequest req = {
+        .function_code = MODBUS_FC_WRITE_SINGLE_REGISTER,
+        .register_address = register_address,
+        .slave_address = slave_address,
+        .write_single.value = value,
+        .callback = callback,
+        .user_data = user_data
+    };
+
+    // TODO: add new status for MB_QUEUE and handle it on the caller side
+    return queue_try_add(ctx->request_queue, &req) ? MB_STATUS_OK : MB_BUSY;
 }
 
 ModbusStatus modbus_task(ModbusContext *ctx)
@@ -150,37 +207,44 @@ ModbusStatus modbus_task(ModbusContext *ctx)
     ModbusRtuError error = modbus_rtu_state_machine(&ctx->rtu);
     ModbusStatus status = map_rtu_error_to_modbus_status(error);
 
+    // handle current request if present 
     ModbusRtuError err;
-    if(!modbus_rtu_take_result(&ctx->rtu, &err)) {
-        return status;
-    }
-    ModbusResult res = { .status = map_rtu_error_to_modbus_status(err) };
-
-    if (err == MODBUS_RTU_ERROR_NONE) {
-        res.status = parse_reply(ctx, (uint8_t *)ctx->rtu.reply.data, ctx->rtu.reply.data_length, &res);
-        if( res.status != MB_STATUS_OK) {
-            uart_puts(UART_ID, "Error parsing reply PDU: ");
-            uart_puts(UART_ID, modbus_status_to_string(res.status));
+    if(modbus_rtu_take_result(&ctx->rtu, &err)) {
+        ModbusResult res = { .status = map_rtu_error_to_modbus_status(err) };
+    
+        if (err == MODBUS_RTU_ERROR_NONE) {
+            res.status = parse_reply(ctx, (uint8_t *)ctx->rtu.reply.data, ctx->rtu.reply.data_length, &res);
+            if( res.status != MB_STATUS_OK) {
+                uart_puts(UART_ID, "Error parsing reply PDU: ");
+                uart_puts(UART_ID, modbus_status_to_string(res.status));
+                uart_puts(UART_ID, "\n");
+            }
+        } else if (err >= MB_STATUS_ERROR_START)
+        {
+            uart_puts(UART_ID, "Modbus error occurred: ");
+            uart_puts(UART_ID, modbus_status_to_string(map_rtu_error_to_modbus_status(err)));
             uart_puts(UART_ID, "\n");
         }
-        // const char *d = ctx->rtu.reply.data;     // register bytes, big-endian
-        // res.reg_count = ctx->rtu.reply.data_length / 2;
-        // for (uint16_t i = 0; i < res.reg_count; i++) {
-        //     ctx->regs[i] = ((uint16_t)(uint8_t)d[2*i] << 8) | (uint8_t)d[2*i + 1];
-        // }
-        // res.regs = ctx->regs;
-    } else if (err >= MB_STATUS_ERROR_START)
-    {
-        uart_puts(UART_ID, "Modbus error occurred: ");
-        uart_puts(UART_ID, modbus_status_to_string(map_rtu_error_to_modbus_status(err)));
-        uart_puts(UART_ID, "\n");
+        
+    
+        ModbusCallback cb = ctx->callback;
+        void *user = ctx->user_data;
+        ctx->callback = NULL;              // cleared first, so the callback may start a new request
+        if (cb) cb(&res, user);
+    }
+
+    // bus is free and request queue not empty, start next request
+    ModbusRequest req;
+    if (ctx->rtu.state == MODBUS_RTU_IDLE && queue_try_remove(ctx->request_queue, &req)) {
+        ModbusStatus s = start_request(ctx, &req);
+        if(s != MB_STATUS_OK) {
+            ModbusResult res = { .status = s };
+            if (req.callback) req.callback(&res, req.user_data);
+        }
     }
     
 
-    ModbusCallback cb = ctx->callback;
-    void *user = ctx->user_data;
-    ctx->callback = NULL;              // cleared first, so the callback may start a new request
-    if (cb) cb(&res, user);
+    return status;
 }
 
 int modbus_is_busy(ModbusContext *context)

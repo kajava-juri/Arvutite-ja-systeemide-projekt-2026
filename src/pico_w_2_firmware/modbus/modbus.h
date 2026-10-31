@@ -2,6 +2,7 @@
 #define MODBUS_H
 
 #include "modbus_rtu.h"
+#include "pico/util/queue.h"
 
 #define MB_STATUS_ERROR_START 200
 
@@ -28,7 +29,21 @@ typedef struct {
     void            *user_data;
     uint16_t regs[125];
     uint8_t expected_count;
+    queue_t *request_queue;
 } ModbusContext;
+
+typedef struct {
+    uint16_t function_code;
+    uint16_t register_address;
+    uint16_t slave_address;
+    union {
+        struct { uint16_t count;} read;
+        struct { uint16_t value;} write_single;
+        struct { uint16_t count; uint16_t *values;} write_multiple;
+    };
+    ModbusCallback callback;
+    void *user_data;
+} ModbusRequest;
 
 ModbusStatus modbus_read_from_holding_registers(ModbusContext *context, uint16_t register_address, uint16_t register_count, uint8_t slave_address,
     ModbusCallback callback, void *user_data);
