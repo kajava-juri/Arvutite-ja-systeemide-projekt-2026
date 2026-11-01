@@ -4,10 +4,12 @@
 # for simulating and testing: replace <user> with your username that has permission to access the port
 # sudo socat -d -d PTY,rawer,link=/dev/ttyS10,user=<user> PTY,rawer,link=/dev/ttyS11
 
-from rtu_server.server import ModbusRtuUIServer
+import sys
+
+from rtu_server.server import ModbusRtuUIServer, RegisterUpdate, UpdateCallback
 import serial
 import argparse
-
+import time
 
 PORT = '/dev/ttyUSB0' # 'COMXXX' on Windows
 # PORT = None
@@ -30,6 +32,9 @@ def parity_from_string(parity_str):
     else:
         raise ValueError(f"Invalid parity value: {parity_str}")
 
+def test_callback(update):
+    print(f"TTT Register '{update.name}' updated to {update.value} {update.unit}")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -51,4 +56,17 @@ if __name__ == "__main__":
         parity=parity_from_string(args.parity),
         stopbits=args.stopbits
     )
+
+    # rtu_server.subscribe(test_callback)
+
     rtu_server.start()
+    try:
+        while True:
+            decoded = rtu_server.get_registers(START_ADDR, NUM_REGS)
+            sys.stdout.write('done: values read: %s\r\n' % (str(decoded)))
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Exiting...")
+        rtu_server.stop()
+    finally:
+        rtu_server.stop()

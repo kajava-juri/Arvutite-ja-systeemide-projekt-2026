@@ -61,11 +61,21 @@ def main():
                 sys.stdout.write('bye-bye\r\n')
                 break
 
+            if len(args) < 3:
+                sys.stdout.write('Invalid command. Usage: write_single <address> <value> or write_multiple <address> <value1> <value2> ...\r\n')
+                continue
+
             elif args[0] == 'write_single':
                 slave_id = SLAVE_ID
                 address = int(args[1])
                 value = int(args[2])
                 logger.info(master.execute(slave_id, cst.WRITE_SINGLE_REGISTER, address, output_value=value))
+
+            elif args[0] == 'write_multiple':
+                slave_id = SLAVE_ID
+                address = int(args[1])
+                values = [int(v) for v in args[2:]]
+                logger.info(master.execute(slave_id, cst.WRITE_MULTIPLE_REGISTERS, address, output_value=values))
 
     except modbus_tk.modbus.ModbusError as exc:
         logger.error("%s- Code=%d", exc, exc.get_exception_code())
