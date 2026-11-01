@@ -1,3 +1,15 @@
+"""
+Modbus RTU UI Server.
+
+Based on the RTU slave example from Modbus TestKit (modbus_tk):
+ (C)2009 - Luc Jean - luc.jean@gmail.com
+ (C)2009 - Apidev - http://www.apidev.fr
+Distributed under the GNU LGPL, see LICENSE-LGPL.txt
+
+Modified 2026 by Jüri Kajava: restructured into the ModbusRtuUIServer class,
+added request logging hooks and register decoding via REGISTER_MAP.
+"""
+
 import sys
 
 import modbus_tk

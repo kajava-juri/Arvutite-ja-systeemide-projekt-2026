@@ -1,13 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf_8 -*-
-"""
- Modbus TestKit: Implementation of Modbus protocol in python
-
- (C)2009 - Luc Jean - luc.jean@gmail.com
- (C)2009 - Apidev - http://www.apidev.fr
-
- This is distributed under GNU LGPL license, see license.txt
-"""
 
 # for simulating and testing: replace <user> with your username that has permission to access the port
 # sudo socat -d -d PTY,rawer,link=/dev/ttyS10,user=<user> PTY,rawer,link=/dev/ttyS11

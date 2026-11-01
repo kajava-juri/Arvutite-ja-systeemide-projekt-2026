@@ -22,5 +22,12 @@ dependencies = [
     "modbus-tk == 1.1.5",
     "pyserial",
     "dataclasses",
-    "argparse"
+    "argparse",
+    "PyQt6",
 ]
+
+[project.scripts]
+rtu_server = "rtu_server.__main__:main"
+
+[project.gui-scripts]
+rtu_server_gui = "rtu_server.gui.__main__:main"

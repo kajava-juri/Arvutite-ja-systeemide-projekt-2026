@@ -147,46 +147,7 @@ cloning the repo. There are two kinds:
 | **Wheel** | `rtu_server-0.1.0-py3-none-any.whl` | Ready-to-install package. This is what `pip` prefers. |
 | **sdist** (source distribution) | `rtu_server-0.1.0.tar.gz` | Source archive; pip builds a wheel from it during install. |
 
-This project uses the `flit_core.buildapi` backend, declared in `pyproject.toml`. You don't
-call flit directly — the standard `build` tool reads `pyproject.toml` and calls the backend for you.
-
-### 1. Check `pyproject.toml`
-
-flit needs at least a name, version and description. A minimal example:
-
-```toml
-[build-system]
-requires = ["flit_core >=3.9,<4"]
-build-backend = "flit_core.buildapi"
-
-[project]
-name = "rtu_server"
-version = "0.1.0"
-description = "Modbus RTU server"
-readme = "README.md"
-requires-python = ">=3.10"
-license = { file = "LICENSE" }
-authors = [{ name = "Your Name", email = "you@example.com" }]
-dependencies = [
-    # runtime dependencies, e.g. "pymodbus>=3.6", "pyserial>=3.5"
-]
-
-[project.optional-dependencies]
-gui = ["PyQt6>=6.6"]
-
-[project.scripts]
-rtu-server = "rtu_server.__main__:main"   # adds an `rtu-server` command on install
-```
-
-Notes:
-
-- **Version from code (optional):** instead of `version = "..."`, you can write
-  `dynamic = ["version"]` and put `__version__ = "0.1.0"` in `rtu_server/__init__.py`.
-  flit reads it from there, so the version lives in one place.
-- **`[project.scripts]`** requires a `main()` function in `__main__.py`. For the GUI, use
-  `[project.gui-scripts]` instead — on Windows it launches without a console window.
-- **Bump the version** before every release. Package indexes refuse to accept a version
-  that has already been uploaded.
+This project uses the `flit_core.buildapi` backend, declared in `pyproject.toml`.
 
 ### 2. Build
 
