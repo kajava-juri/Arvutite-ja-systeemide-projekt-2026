@@ -16,7 +16,7 @@
 #define PWM_WRAP 5999
 
 static int previous_value = 1;
-static uint16_t rotary_value = MOTOR_MAX_PWM; // Start at max speed
+static uint16_t rotary_value = 0; // Start at max speed
 
 // Function prototypes
 void motor_init(void);
@@ -32,9 +32,9 @@ static void rotary_changed(void) {
     if (previous_value != clk) {
         if (clk == 0) {
             if (gpio_get(DT_PIN) == 0) {
-                if (rotary_value > MOTOR_MIN_PWM) rotary_value--;
+                if (rotary_value > 0) rotary_value--;
             } else {
-                if (rotary_value < MOTOR_MAX_PWM) rotary_value++;
+                if (rotary_value < 40) rotary_value++;
             }
         }
         previous_value = clk;
