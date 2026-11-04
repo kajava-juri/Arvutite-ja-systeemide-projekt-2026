@@ -31,4 +31,6 @@
 #define MOTOR_MIN_PWM 60
 #define MOTOR_MAX_PWM 100
 
+GET_PWM_NORMALIZED(val) (MOTOR_MIN_PWM) + ((val) * ((MOTOR_MAX_PWM) - (MOTOR_MIN_PWM)))
+
 #endif // COMMON_H
