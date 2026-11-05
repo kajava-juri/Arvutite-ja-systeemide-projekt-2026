@@ -98,7 +98,8 @@ int main()
         .pressure_raw = 0,
         .pressure = 0.0f,
         .updated_ms = 0,
-        .last_status = MB_STATUS_OK
+        .last_status = MB_STATUS_OK,
+        .interface_slave = &interface_slave
     };
 
     uint16_t setpoint = 0; // Pa

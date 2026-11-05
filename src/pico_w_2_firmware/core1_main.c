@@ -16,7 +16,7 @@
 #define PWM_WRAP 5999
 
 static int previous_value = 1;
-static uint16_t rotary_value = MOTOR_MAX_PWM; // Start at max speed
+static uint16_t rotary_value = 0; // Start at max speed
 
 // Function prototypes
 void motor_init(void);
@@ -32,9 +32,9 @@ static void rotary_changed(void) {
     if (previous_value != clk) {
         if (clk == 0) {
             if (gpio_get(DT_PIN) == 0) {
-                if (rotary_value > MOTOR_MIN_PWM) rotary_value--;
+                if (rotary_value > 0) rotary_value--;
             } else {
-                if (rotary_value < MOTOR_MAX_PWM) rotary_value++;
+                if (rotary_value < 40) rotary_value++;
             }
         }
         previous_value = clk;
@@ -67,7 +67,7 @@ void core1_entry() {
     bool fresh = false;
 
     pid_ctrl_t pid = {0};
-    pid_init(&pid, 1.0f, 0.1f, 0.05f, 0, 100); // Initialize PID controller with gains and output limits
+    pid_init(&pid, 0.3f, 0.1f, 0.05f, 0, 100); // Initialize PID controller with gains and output limits
 
     absolute_time_t next_print = make_timeout_time_ms(100);
     absolute_time_t next_motor_update = make_timeout_time_ms(1000);
@@ -108,7 +108,7 @@ void core1_entry() {
             next_motor_update = make_timeout_time_ms(1000);
         }
 
-        set_motor_speed((uint32_t)pid.output);
+        set_motor_speed((uint32_t)GET_PWM_NORMALIZED(min_max_scale(pid.output, pid.output_min, pid.output_max)));
 
         sleep_us(500);
     }
