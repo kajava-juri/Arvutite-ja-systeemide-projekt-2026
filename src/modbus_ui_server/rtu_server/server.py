@@ -30,6 +30,9 @@ class RegisterUpdate:
 
 UpdateCallback = Callable[[RegisterUpdate], None]
 
+def to_int16(raw: int) -> int:
+    return raw - 0x10000 if raw & 0x8000 else raw
+
 class ModbusRtuUIServer:
     def __init__(self, port, slave_id, block, start_addr, num_regs, baudrate=9600, parity=serial.PARITY_NONE, stopbits=2):
         self.port = port
@@ -72,12 +75,14 @@ class ModbusRtuUIServer:
     def handle_set_item(self, fct: tuple[ModbusBlock, any, any]) -> None:
         (block, slice, value) = fct
         """Hook to handle after receiving a response from the Modbus master."""
-        self.logger.info(f"Received slice: {slice}, value: {value}")
-        self.logger.info(f"Block: {block.starting_address}, Size: {block.size}")
+        # self.logger.info(f"Received slice: {slice}, value: {value}")
+        # self.logger.info(f"Block: {block.starting_address}, Size: {block.size}")
 
         register_name = self._name_by_offset.get(slice)
         if register_name is not None:
             reg_info = REGISTER_MAP[register_name]
+            if (reg_info.signed):
+                value = to_int16(value)
             scaled_value = value * reg_info.scale
             update = RegisterUpdate(name=register_name, value=scaled_value, unit=reg_info.unit)
             self._notify_callbacks([update])

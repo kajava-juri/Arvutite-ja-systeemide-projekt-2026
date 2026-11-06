@@ -58,7 +58,6 @@ void core1_entry() {
 
     SensorData last_sensor_data = {0};
 
-    uint32_t target_speed = 50;
     float preverror = 0.0;
     
     // set_motor_speed(100);
@@ -67,8 +66,8 @@ void core1_entry() {
     char buffer[100];
     bool fresh = false;
 
-    // pid_ctrl_t pid = {0};
-    // pid_init(&pid, 1.0f, 0.1f, 0.05f, MOTOR_MIN_PWM, MOTOR_MAX_PWM); // Initialize PID controller with gains and output limits
+    pid_ctrl_t pid = {0};
+    pid_init(&pid, 0.3f, 0.1f, 0.05f, 0, 100); // Initialize PID controller with gains and output limits
 
     absolute_time_t next_print = make_timeout_time_ms(100);
     absolute_time_t next_motor_update = make_timeout_time_ms(1000);
@@ -91,15 +90,8 @@ void core1_entry() {
                 continue;
             }
 
-            // float output = pid_controller(setpoint, last_sensor_data.data, &pid,
-            //     to_ms_since_boot(get_absolute_time() / 1000) - last_sensor_data.updated_ms); // Call PID controller
-
-            // int percent = (int)(output);
-            // if (percent < MOTOR_MIN_PWM) percent = MOTOR_MIN_PWM;
-            // if (percent > MOTOR_MAX_PWM) percent = MOTOR_MAX_PWM;
-            // uint16_t level = (uint16_t)((min_max_scale(output, MOTOR_MIN_PWM, MOTOR_MAX_PWM) * PWM_WRAP) / 100);
-            // snprintf(buffer, sizeof(buffer), "Core 1: PID output: %.2f, Percent: %d, Level: %u\n", output, percent, level);
-            // uart_puts(UART_ID, buffer);
+            float output = pid_controller((float)rotary_value, last_sensor_data.data, &pid, (float)queue_poll_time / 1000.0f);
+            // target_speed = MOTOR_MIN_PWM + (output * (MOTOR_MAX_PWM - MOTOR_MIN_PWM));
         }
 
         rotary_changed();
@@ -116,7 +108,7 @@ void core1_entry() {
             next_motor_update = make_timeout_time_ms(1000);
         }
 
-        // set_motor_speed(rotary_value);
+        set_motor_speed((uint32_t)GET_PWM_NORMALIZED(min_max_scale(pid.output, pid.output_min, pid.output_max)));
 
         sleep_us(500);
     }

@@ -12,6 +12,7 @@ import serial
 
 from rtu_server.server import ModbusRtuUIServer, RegisterUpdate, UpdateCallback
 from rtu_server.registers import REGISTER_MAP, Register
+from rtu_server.data_logger import CsvDataLogger, default_log_path
 
 PORT = '/dev/ttyUSB0' # 'COMXXX' on Windows
 # PORT = None
@@ -23,6 +24,10 @@ SLAVE_ID = 10
 BLOCK = 'ui'
 START_ADDR = 0
 NUM_REGS = 20
+
+LOG_DIR = 'logs'
+LOG_FIELDS = ('setpoint', 'pressure')
+
 
 def parity_from_string(parity_str):
     if parity_str == 'none':
@@ -107,8 +112,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         # root window setup
         self.setWindowTitle("PyQt6 Demo")
-        # self.showMaximized()
-        self.showFullScreen()
+        self.showMaximized()
+        # self.showFullScreen()
 
         root_widget = QWidget()
         root_layout = QVBoxLayout()
@@ -146,6 +151,10 @@ if __name__ == "__main__":
     parser.add_argument("--parity", help="Parity (default: none)", choices=['none', 'even', 'odd'], default='none')
     parser.add_argument("--stopbits", help="Stop bits (default: 2)", type=int, choices=[1, 2], default=STOPBITS)
     parser.add_argument("--slave-id", help="Slave ID (default: 10)", type=int, default=SLAVE_ID)
+    parser.add_argument("--log-dir", help=f"Directory for CSV logs (default: {LOG_DIR})", default=LOG_DIR)
+    parser.add_argument("--log-file", help="Explicit CSV path (overrides --log-dir)", default=None)
+    parser.add_argument("--no-log", help="Disable CSV data logging", action="store_true")
+
 
     args = parser.parse_args()
 
@@ -160,6 +169,14 @@ if __name__ == "__main__":
         stopbits=args.stopbits
     )
 
+    data_logger = None
+    if not args.no_log:
+        log_path = args.log_file or default_log_path(args.log_dir)
+        data_logger = CsvDataLogger(log_path, fields=LOG_FIELDS)
+        rtu_server.subscribe(data_logger)
+        print(f"Logging {', '.join(LOG_FIELDS)} to {data_logger.path}")
+
+
     rtu_server.start()
 
     app = QApplication(sys.argv)
@@ -168,6 +185,10 @@ if __name__ == "__main__":
     rtu_server.subscribe(window.on_register_update)
 
     app.aboutToQuit.connect(rtu_server.stop)
+    if data_logger is not None:
+        # Connected after stop, so the server finishes before the file closes
+        app.aboutToQuit.connect(data_logger.close)
+
 
     window.show()
     sys.exit(app.exec())

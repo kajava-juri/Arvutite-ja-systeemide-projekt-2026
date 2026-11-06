@@ -10,4 +10,5 @@ class Register:
 REGISTER_MAP: dict[str, Register] = {
     "pressure": Register(offset_addr=0, scale=1, signed=True, unit="Pa"),
     "setpoint": Register(offset_addr=1, scale=1, signed=True, unit="Pa"),
+    "pwm": Register(offset_addr=2, scale=1, signed=False, unit="%"),
 }
