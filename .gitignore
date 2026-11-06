@@ -43,3 +43,5 @@ fp-info-cache
 *.kicad_prl
 
 *.obsidian
+
+!docs/**/*.xml
