@@ -176,7 +176,6 @@ void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)
         if (ctx->retry_count > MODBUS_RTU_MAX_RETRIES) {
             set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
             ctx->pending_error = MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED;
-            return;
         }
         return; // timeout with no data received, stay in waiting for reply state
     }
@@ -238,7 +237,7 @@ void modbus_rtu_action_entry_processing_error(ModbusRtuContext *ctx)
 void modbus_rtu_action_processing_error(ModbusRtuContext *ctx)
 {
     uint8_t error_code = ctx->request.function_code;
-
+    ctx->retry_count = 0;
     // for debuggin go back to idle state and print error
     finish(ctx, ctx->pending_error);
 }
