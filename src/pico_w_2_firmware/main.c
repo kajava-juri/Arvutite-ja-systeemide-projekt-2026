@@ -43,7 +43,7 @@ int main()
     queue_t qbm68_publish_q;
     queue_t modbus_request_q;
     queue_init(&qbm68_publish_q, sizeof(PublishData), 1);
-    queue_init(&core1_to_core0_q, sizeof(uint16_t), 1);
+    queue_init(&core1_to_core0_q, sizeof(uint32_t), 1);
     queue_init(&sensor_data_q, sizeof(SensorData), 1);
     queue_init(&modbus_request_q, sizeof(ModbusRequest), 3);
     
