@@ -102,7 +102,7 @@ int main()
         .interface_slave = &interface_slave
     };
 
-    uint16_t setpoint = 0; // Pa
+    uint32_t setpoint = 0; // Pa
     bool fresh = false;
     char buffer[100];
 

@@ -25,6 +25,9 @@
 #define ENCODER_SAVE_DELAY_MS 10000
 #define STORAGE_MAGIC 0xDEADBEEF // random bits to check on read that data was written by us and not random flash data
 
+#define ENCODER_MAX 100
+#define ENCODER_MIN 0
+
 typedef struct {
     uint32_t magic_header; 
     uint32_t encoder_value; 
@@ -77,13 +80,14 @@ bool save_encoder_value(uint32_t value) {
 }
 
 uint32_t load_encoder_value(uint32_t default_value) {
-    if (saved_data->magic_header == STORAGE_MAGIC &&
-        saved_data->encoder_value <= 40) {
-        printf("Restored encoder value: %" PRIu32 "\n", saved_data->encoder_value);
+    char buffer[100];
+    if (saved_data->magic_header == STORAGE_MAGIC) {
+        snprintf(buffer, sizeof(buffer), "Restored encoder value: %" PRIu32 "\n", saved_data->encoder_value);
+        uart_puts(UART_ID, buffer);
         return (uint32_t)saved_data->encoder_value;
     } else {
-        printf("No valid flash data (magic 0x%08" PRIX32"). Using default: %" PRIu32 "\n", 
-        saved_data->magic_header,default_value);
+        snprintf(buffer, sizeof(buffer), "No valid flash data (magic 0x%08" PRIX32"). Using default: %" PRIu32 "\n", saved_data->magic_header, default_value);
+        uart_puts(UART_ID, buffer);
         return default_value;
     }
 }
@@ -106,10 +110,12 @@ static void rotary_changed(void) {
     if (previous_value != clk) {
         if (clk == 0) {
             if (gpio_get(DT_PIN) == 0) {
-                if (rotary_value > 0) rotary_value--;
+                uart_puts(UART_ID, "Rotary encoder: decrement\n");
+                if (rotary_value > ENCODER_MIN) rotary_value--;
                 mark_rotary_changed();
             } else {
-                if (rotary_value < 40) rotary_value++;
+                uart_puts(UART_ID, "Rotary encoder: increment\n");
+                if (rotary_value < ENCODER_MAX) rotary_value++;
                 mark_rotary_changed();
             }
         }
@@ -132,7 +138,7 @@ static void publish_setpoint_to_core0(uint32_t setpoint) {
 void core1_entry() {
     motor_init();
 
-    rotary_value = load_encoder_value(0);
+    // rotary_value = load_encoder_value(0);
 
     SensorData last_sensor_data = {0};
 
@@ -141,21 +147,21 @@ void core1_entry() {
     bool fresh = false;
 
     pid_ctrl_t pid = {0};
-    pid_init(&pid, 0.3f, 0.1f, 0.05f, 0, 100); // Initialize PID controller with gains and output limits
+    pid_init(&pid, 0.2f, 0.4f, 0.05f, 0, 100); // Initialize PID controller with gains and output limits
 
     absolute_time_t next_print = make_timeout_time_ms(100);
-    absolute_time_t next_motor_update = make_timeout_time_ms(1000);
-    absolute_time_t queue_poll_time = make_timeout_time_ms(100);
+    // absolute_time_t next_motor_update = make_timeout_time_ms(100);
+    absolute_time_t queue_poll_time = make_timeout_time_ms(200);
 
     while (1) {
         
         rotary_changed();
         
         // Check if flash write delay timer expired
-        process_flash_save();
+        // process_flash_save();
         
         if (time_reached(queue_poll_time)) {
-            queue_poll_time = make_timeout_time_ms(100);
+            queue_poll_time = make_timeout_time_ms(200);
             fresh = queue_try_remove(&sensor_data_q, &last_sensor_data);
             if(fresh) {
                 snprintf(buffer, sizeof(buffer), "Core 1: Received sensor data: %.2f at %u ms\n", last_sensor_data.data, last_sensor_data.updated_ms);
@@ -164,13 +170,13 @@ void core1_entry() {
 
             publish_setpoint_to_core0(rotary_value);
             
-            if (last_sensor_data.updated_ms == 0) {
-                // No valid sensor data yet, skip PID control
-                sleep_ms(100);
-                continue;
+            if (last_sensor_data.updated_ms > 0) {
+                float output = pid_controller((float)rotary_value, last_sensor_data.data, &pid, 0.2f);
             }
 
-            float output = pid_controller((float)rotary_value, last_sensor_data.data, &pid, (float)queue_poll_time / 1000.0f);
+            uart_puts(UART_ID, "Updating motor speed based on rotary encoder value\n");
+            set_motor_speed(pid.output);
+
         }
         
         if (time_reached(next_print)) {
@@ -180,12 +186,7 @@ void core1_entry() {
             next_print = make_timeout_time_ms(100);
         }
 
-        if (time_reached(next_motor_update)) {
-            set_motor_speed(rotary_value);
-            next_motor_update = make_timeout_time_ms(1000);
-        }
-
-        set_motor_speed((uint32_t)GET_PWM_NORMALIZED(min_max_scale(pid.output, pid.output_min, pid.output_max)));
+        // set_motor_speed((uint32_t)GET_PWM_NORMALIZED(min_max_scale(rotary_value, pid.output_min, pid.output_max)));
 
         sleep_us(500);
     }
@@ -226,6 +227,8 @@ void motor_init(void) {
     
     // Start with the motor off
     pwm_set_gpio_level(ENA_PIN, 0);
+
+    uart_puts(UART_ID, "core 1 pins initialized\n");
 }
 
 // Set speed (0-100) 
