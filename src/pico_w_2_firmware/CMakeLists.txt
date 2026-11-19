@@ -58,7 +58,9 @@ pico_enable_stdio_uart(pico_w_2_firmware 0)
 target_link_libraries(pico_w_2_firmware
         pico_stdlib
         pico_multicore
-        hardware_pwm)
+        hardware_pwm
+        hardware_flash
+        pico_flash)
 
 # Add the standard include files to the build
 target_include_directories(pico_w_2_firmware PRIVATE

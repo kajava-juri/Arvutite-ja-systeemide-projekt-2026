@@ -35,11 +35,11 @@ int max485_send_data(Max485State *dev, uint8_t *data, size_t length)
     }
 
     if (uart_is_writable(dev->uart)) {
-        uart_puts(UART_ID, "Sending data over MAX485\n");
+        // uart_puts(UART_ID, "Sending data over MAX485\n");
         // uart_puts(dev->uart, "Hello, MAX485!\n");
         uart_write_blocking(dev->uart, data, length);
         // debug write to UART0
-        uart_puts(UART_ID, "Data sent over MAX485\n");
+        // uart_puts(UART_ID, "Data sent over MAX485\n");
     } else {
         uart_puts(UART_ID, "UART not writable\n");
         return -1; // UART not writable
@@ -77,7 +77,7 @@ int max485_receive_data(Max485State *dev, uint8_t *buffer, int timeout_us, size_
             if (bytes_received > 0) {
                 break;
             } else {
-                uart_puts(UART_ID, "Timeout waiting for data\n");
+                // uart_puts(UART_ID, "Timeout waiting for data\n");
                 return 0; // timeout with no data received
             }
         }

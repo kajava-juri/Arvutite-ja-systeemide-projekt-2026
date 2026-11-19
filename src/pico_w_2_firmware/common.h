@@ -28,7 +28,7 @@
 #define SW_PIN   11
 #define DEBOUNCE_US 100
 
-#define MOTOR_MIN_PWM 60
+#define MOTOR_MIN_PWM 0
 #define MOTOR_MAX_PWM 100
 
 #define GET_PWM_NORMALIZED(val) (MOTOR_MIN_PWM) + ((val) * ((MOTOR_MAX_PWM) - (MOTOR_MIN_PWM)))

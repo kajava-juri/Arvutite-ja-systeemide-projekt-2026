@@ -14,7 +14,7 @@ static void on_pressure(ModbusResult *res, void *user)
 
     if(dev->interface_slave != NULL) {
         PublishData data = {
-            .reg_address = QBM68_REG_PRESSURE,
+            .reg_address = INTERFACE_REG_PRESSURE,
             .reg_value   = (uint16_t)dev->pressure_raw
         };
         queue_try_add(&dev->interface_slave->publish_q, &data);
@@ -31,7 +31,7 @@ void qbm68_task(Qbm68 *dev)
     uint32_t now = to_ms_since_boot(get_absolute_time());
     if (dev->pending || now - dev->last_request_ms < QBM68_POLL_MS) return;
 // ModbusContext *ctx, uint16_t register_address, uint16_t register_count, uint8_t slave_address, ModbusCallback callback, void *user_data
-    if (modbus_read_from_holding_registers(dev->mb, 4, 1, dev->slave,
+    if (modbus_read_from_holding_registers(dev->mb, QBM68_REG_PRESSURE, 1, dev->slave,
                                       on_pressure, dev) == MB_STATUS_OK) {
         dev->pending = true;
         dev->last_request_ms = now;

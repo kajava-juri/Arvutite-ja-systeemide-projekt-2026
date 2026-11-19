@@ -138,7 +138,7 @@ void modbus_rtu_init(ModbusRtuContext *ctx)
 
 void modbus_rtu_action_entry_idle(ModbusRtuContext *ctx)
 {
-    uart_puts(UART_ID, "Modbus RTU Idle state\n");
+    // uart_puts(UART_ID, "Modbus RTU Idle state\n");
 }
 
 void modbus_rtu_action_idle(ModbusRtuContext *ctx)
@@ -155,14 +155,14 @@ void modbus_rtu_action_idle(ModbusRtuContext *ctx)
 
 void modbus_rtu_action_entry_waiting_for_reply(ModbusRtuContext *ctx)
 {
-    uart_puts(UART_ID, "Waiting for reply state\n");
+    // uart_puts(UART_ID, "Waiting for reply state\n");
 }
 
 void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)
 {
     uint32_t current_time = to_ms_since_boot(get_absolute_time());
     if (current_time - ctx->last_request_time > MODBUS_RTU_REPLY_TIMEOUT_MS) {
-        uart_puts(UART_ID, "Timeout waiting for reply\n");
+        // uart_puts(UART_ID, "Timeout waiting for reply\n");
         ctx->pending_error = MODBUS_RTU_ERROR_TIMEOUT;
         set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
         return;
@@ -176,7 +176,6 @@ void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)
         if (ctx->retry_count > MODBUS_RTU_MAX_RETRIES) {
             set_state(ctx, MODBUS_RTU_PROCESSING_ERROR);
             ctx->pending_error = MODBUS_RTU_ERROR_MAX_RETRIES_EXCEEDED;
-            return;
         }
         return; // timeout with no data received, stay in waiting for reply state
     }
@@ -200,7 +199,7 @@ void modbus_rtu_action_waiting_for_reply(ModbusRtuContext *ctx)
 
 void modbus_rtu_action_entry_processing_reply(ModbusRtuContext *ctx)
 {
-    uart_puts(UART_ID, "Processing reply state\n");
+    // uart_puts(UART_ID, "Processing reply state\n");
 }
 
 void modbus_rtu_action_processing_reply(ModbusRtuContext *ctx)
@@ -232,20 +231,20 @@ void modbus_rtu_action_processing_reply(ModbusRtuContext *ctx)
 
 void modbus_rtu_action_entry_processing_error(ModbusRtuContext *ctx)
 {
-    uart_puts(UART_ID, "Processing error state\n");
+    // uart_puts(UART_ID, "Processing error state\n");
 }
 
 void modbus_rtu_action_processing_error(ModbusRtuContext *ctx)
 {
     uint8_t error_code = ctx->request.function_code;
-
+    ctx->retry_count = 0;
     // for debuggin go back to idle state and print error
     finish(ctx, ctx->pending_error);
 }
 
 void modbus_rtu_action_turnaround_delay(ModbusRtuContext *ctx)
 {
-    uart_puts(UART_ID, "Waiting for turnaround delay\n");
+    // uart_puts(UART_ID, "Waiting for turnaround delay\n");
 }
 
 int modbus_rtu_set_slave_address(ModbusRtuContext *ctx, uint8_t slave_address)

@@ -1,0 +1,11 @@
+log_file, Kp, Ki, Kd
+
+WITH PID CONTROL
+
+rtu_log_20261113_160058.csv, 0.1f, 0.3f, 0.05f
+rtu_log_20261113_160551.csv, 0.2f, 0.4f, 0.05f
+
+WITH MANUAL
+
+rtu_log_20261113_162121.csv, 0.2f, 0.4f, 0.05f
+rtu_log_20261113_161542.csv, 0.2f, 0.4f, 0.05f

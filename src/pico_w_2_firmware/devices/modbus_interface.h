@@ -4,7 +4,8 @@
 #include "pico/util/queue.h"
 #include "modbus/modbus.h"
 
-#define INTERFACE_REG_PRESSURE 1
+#define INTERFACE_REG_PRESSURE 0
+#define INTERFACE_REG_SETPOINT 1
 
 typedef struct {
     uint16_t reg_address;
